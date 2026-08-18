@@ -1,0 +1,51 @@
+# Toolshed — automatic page generator
+#
+# Runs on GitHub's servers every time index.html changes. It regenerates the
+# per-tool pages, sitemap.xml and robots.txt, then commits them back.
+#
+# You never run anything locally. Edit index.html in the browser, commit, done.
+name: Build tool pages
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'index.html'
+      - 'build.js'
+      - '.github/workflows/build-pages.yml'
+  workflow_dispatch:        # adds a "Run workflow" button you can click manually
+
+permissions:
+  contents: write           # needed to commit the generated pages back
+
+concurrency:
+  group: build-pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Generate pages
+        env:
+          # Change this if you move to a custom domain later.
+          SITE_URL: https://koljacks.github.io/Toolshed
+        run: node build.js
+
+      - name: Commit the result
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A t sitemap.xml robots.txt
+          if git diff --staged --quiet; then
+            echo "Nothing changed — skipping commit."
+          else
+            git commit -m "Rebuild tool pages [skip ci]"
+            git push
+          fi
