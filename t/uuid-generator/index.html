@@ -1,0 +1,3019 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>UUID Generator — free, no signup | Toolshed</title>
+<meta name="description" content="Generate v4 UUIDs, one or a thousand, ready to copy. Free, runs in your browser, nothing is uploaded.">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#e9e9ec" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#101010" media="(prefers-color-scheme: dark)">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Geist+Mono:wght@400;500&family=Geist:wght@400;450;500;600&display=swap" rel="stylesheet">
+<style>
+/* ═══════════════════════════════════════════════════════════════
+   TOKENS
+   The whole look comes from four stacked greys:
+   frame (page) → chrome (rails) → surface (panels) → card (tiles)
+   Borders are hairline SHADOWS, so nothing shifts on hover.
+   ═══════════════════════════════════════════════════════════════ */
+:root{
+  --frame:#E9E9EC; --chrome:#F4F4F5; --surface:#FFFFFF; --card:#EBEBED;
+  --inset:#F5F5F5; --line:#0000001a; --muted:#0000008c; --body:#000000D9;
+  --primary:#000000; --accent:#FFB100; --accent-hi:#E8A000; --accent-fg:#1A1300;
+  --hair:0 0 0 1px #00000014;
+  --sh-sm:0 2px 2px #0000000a;
+  --sh-md:0 2px 2px #0000000a, 0 .5rem .5rem -.5rem #0000000f;
+  --sh-lg:0 2px 2px #0000000a, 0 .5rem 1rem -.25rem #00000014;
+  --r:1rem;
+}
+html.dark{
+  --frame:#101010; --chrome:#1C1C1D; --surface:#161616; --card:#1F1F20;
+  --inset:#1E1E1E; --line:#ffffff1a; --muted:#ffffff8c; --body:#ffffffb3;
+  --primary:#E2E2E2; --accent:#FFB100; --accent-hi:#FFC336; --accent-fg:#1A1300;
+  --hair:0 0 0 1px #ffffff14;
+  --sh-sm:0 2px 2px #00000033; --sh-md:0 2px 8px #00000040; --sh-lg:0 2px 16px #00000059;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;height:100%}
+body{
+  background:var(--frame); color:var(--body);
+  font-family:"Geist",system-ui,-apple-system,sans-serif;
+  font-size:14.5px; line-height:1.55; -webkit-font-smoothing:antialiased;
+}
+h1,h2,h3{color:var(--primary)}
+.mono{font-family:"Geist Mono",ui-monospace,monospace}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+::selection{background:var(--accent);color:var(--accent-fg)}
+
+/* ═══ APP SHELL: two rounded panels floating on the frame ═══ */
+.app{display:grid;grid-template-columns:252px minmax(0,1fr);gap:10px;padding:10px;height:100dvh}
+.rail{
+  background:var(--chrome); border-radius:var(--r); box-shadow:var(--hair);
+  display:flex; flex-direction:column; overflow:hidden;
+}
+.stage{
+  background:var(--surface); border-radius:var(--r);
+  box-shadow:var(--hair), var(--sh-sm); overflow-y:auto; position:relative;
+}
+
+/* ─── rail ─── */
+.rail-hd{padding:16px 14px 10px;display:flex;align-items:center;gap:9px}
+.logo{
+  width:26px;height:26px;border-radius:8px;background:var(--primary);color:var(--surface);
+  display:grid;place-items:center;font-size:14px;flex-shrink:0;
+}
+.rail-hd b{font-family:"Bricolage Grotesque",sans-serif;font-weight:800;font-size:16px;letter-spacing:-.02em;color:var(--primary)}
+.rail nav{padding:4px 8px;overflow-y:auto;flex:1}
+.rail-lbl{
+  font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);
+  padding:14px 8px 6px;font-family:"Geist Mono",monospace;
+}
+.nv{
+  width:100%;display:flex;align-items:center;gap:9px;padding:8px 9px;
+  border:0;background:none;color:var(--body);border-radius:9px;cursor:pointer;
+  font-family:inherit;font-size:14px;text-align:left;
+}
+.nv:hover{background:var(--card)}
+.nv[aria-current="true"]{background:var(--surface);color:var(--primary);font-weight:500;box-shadow:var(--hair)}
+.nv .dot{width:16px;text-align:center;font-size:13px;opacity:.75;flex-shrink:0}
+.nv .n{margin-left:auto;font-size:11px;color:var(--muted);font-family:"Geist Mono",monospace}
+.rail-ft{padding:12px 14px;border-top:1px solid var(--line);font-size:11.5px;color:var(--muted)}
+
+/* ─── stage header ─── */
+.bar{
+  position:sticky;top:0;z-index:20;background:var(--surface);
+  border-bottom:1px solid var(--line);padding:11px 18px;
+  display:flex;align-items:center;gap:12px;
+}
+.burger{display:none}
+.crumbs{font-size:13px;color:var(--muted);display:flex;align-items:center;gap:7px;min-width:0}
+.crumbs button{background:none;border:0;color:var(--muted);cursor:pointer;font:inherit;padding:0}
+.crumbs button:hover{color:var(--primary)}
+.crumbs .cur{color:var(--primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bar .sp{flex:1}
+.ib{
+  width:32px;height:32px;flex-shrink:0;display:grid;place-items:center;border:0;
+  background:var(--card);color:var(--body);border-radius:9px;cursor:pointer;font-size:14px;
+}
+.ib:hover{background:var(--inset);box-shadow:var(--hair);color:var(--primary)}
+.ib[aria-pressed="true"]{background:var(--accent);color:var(--accent-fg)}
+
+/* ─── hero ─── */
+.pad{padding:26px 22px 40px;max-width:1180px;margin:0 auto}
+.hero{text-align:center;padding:26px 0 4px}
+.hero h1{
+  font-family:"Bricolage Grotesque",sans-serif;font-weight:800;
+  font-size:clamp(30px,5vw,46px);letter-spacing:-.035em;line-height:1.05;margin:0 0 10px;
+}
+.hero p{margin:0 auto;max-width:52ch;color:var(--muted);font-size:15.5px}
+.mark{background:var(--accent);color:var(--accent-fg);padding:0 .18em;border-radius:6px}
+
+/* ─── search ─── */
+.searchwrap{max-width:560px;margin:22px auto 0;position:relative;display:flex;align-items:center;gap:10px}
+.searchwrap .box{flex:1;position:relative}
+.searchwrap input{
+  width:100%;padding:11px 14px 11px 38px;border:0;border-radius:11px;
+  background:var(--card);color:var(--primary);font-family:inherit;font-size:14.5px;
+}
+.searchwrap input::placeholder{color:var(--muted)}
+.searchwrap input:focus{background:var(--surface);box-shadow:var(--hair),var(--sh-md);outline:none}
+.searchwrap svg{position:absolute;left:13px;top:50%;transform:translateY(-50%);opacity:.5;pointer-events:none}
+.kbd{
+  position:absolute;right:11px;top:50%;transform:translateY(-50%);
+  font-family:"Geist Mono",monospace;font-size:10.5px;color:var(--muted);
+  border:1px solid var(--line);border-radius:5px;padding:1px 5px;pointer-events:none;
+}
+
+/* ─── filter row ─── */
+.filters{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:26px 0 16px}
+.pill{
+  border:0;background:var(--card);color:var(--body);padding:7px 14px;border-radius:999px;
+  cursor:pointer;font-family:inherit;font-size:13.5px;display:inline-flex;align-items:center;gap:7px;
+}
+.pill:hover{color:var(--primary)}
+.pill[aria-pressed="true"]{background:var(--accent);color:var(--accent-fg);font-weight:500}
+.pill .n{font-size:11px;opacity:.6;font-family:"Geist Mono",monospace}
+.views{margin-left:auto;display:flex;gap:4px;background:var(--card);padding:3px;border-radius:10px}
+.views button{width:28px;height:26px;border:0;background:none;border-radius:7px;cursor:pointer;color:var(--muted);font-size:13px}
+.views button[aria-pressed="true"]{background:var(--surface);color:var(--primary);box-shadow:var(--hair)}
+
+/* ─── tool grid ─── */
+#grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(232px,1fr));gap:12px}
+#grid.list{grid-template-columns:1fr}
+.tool{
+  position:relative;text-align:left;cursor:pointer;font-family:inherit;color:inherit;
+  background:var(--card);border:0;border-radius:var(--r);padding:16px;
+  transition:transform .14s cubic-bezier(.2,.7,.3,1), box-shadow .14s, background .14s;
+}
+.tool:hover{background:var(--surface);box-shadow:var(--hair),var(--sh-lg);transform:translateY(-2px)}
+#grid.list .tool{display:grid;grid-template-columns:38px 1fr;gap:14px;align-items:start;padding:14px 16px}
+#grid.list .tool:hover{transform:none}
+#grid.list .glyph{margin:0}
+.glyph{
+  width:38px;height:38px;border-radius:11px;display:grid;place-items:center;
+  font-size:17px;color:#fff;margin-bottom:13px;box-shadow:var(--sh-sm);
+}
+.tool h3{font-size:15px;font-weight:600;margin:0 0 4px;letter-spacing:-.012em;line-height:1.3}
+.tool p{margin:0;font-size:13px;color:var(--muted);line-height:1.45}
+.fav{
+  position:absolute;top:11px;right:11px;width:26px;height:26px;border:0;background:none;
+  cursor:pointer;color:var(--muted);border-radius:7px;display:grid;place-items:center;font-size:13px;
+}
+.fav:hover{background:var(--inset);color:var(--primary)}
+.fav[aria-pressed="true"]{color:var(--accent-hi)}
+html.dark .fav[aria-pressed="true"]{color:var(--accent)}
+.new{
+  position:absolute;top:12px;left:-1px;background:var(--accent);color:var(--accent-fg);
+  font-family:"Geist Mono",monospace;font-size:9px;letter-spacing:.08em;padding:2px 6px;border-radius:0 5px 5px 0;
+}
+.empty{grid-column:1/-1;text-align:center;padding:64px 0;color:var(--muted)}
+.empty b{display:block;font-size:17px;color:var(--primary);margin-bottom:5px;font-weight:600}
+
+/* ═══ WORKBENCH ═══ */
+.bench{max-width:820px;margin:0 auto;padding:28px 22px 60px}
+.bench-hd{display:flex;gap:15px;align-items:flex-start;margin-bottom:22px}
+.bench-hd h2{
+  font-family:"Bricolage Grotesque",sans-serif;font-weight:800;
+  font-size:clamp(23px,3.6vw,31px);letter-spacing:-.03em;margin:0 0 5px;line-height:1.12;
+}
+.bench-hd p{margin:0;color:var(--muted);font-size:14.5px}
+.bench-hd .glyph{margin:0;flex-shrink:0}
+
+.panel{background:var(--card);border-radius:var(--r);padding:20px}
+.panel + .panel{margin-top:12px}
+.panel h3{font-size:14px;font-weight:600;margin:0 0 12px}
+
+/* form furniture — shared by every tool */
+.row{display:grid;grid-template-columns:repeat(auto-fit,minmax(168px,1fr));gap:13px}
+.f{display:block}
+.f > span{
+  display:block;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--muted);margin-bottom:6px;font-family:"Geist Mono",monospace;
+}
+input[type=text],input[type=number],input[type=date],input[type=search],select,textarea{
+  width:100%;padding:10px 12px;border:0;border-radius:10px;background:var(--surface);
+  color:var(--primary);font-family:inherit;font-size:14.5px;box-shadow:var(--hair);
+}
+input:focus,select:focus,textarea:focus{outline:none;box-shadow:0 0 0 2px var(--accent)}
+textarea{resize:vertical;min-height:132px;line-height:1.55}
+input[type=range]{width:100%;accent-color:var(--accent-hi);box-shadow:none;background:none;padding:0}
+.btn{
+  font-family:inherit;font-weight:500;font-size:14px;padding:10px 18px;border:0;
+  border-radius:10px;cursor:pointer;background:var(--accent);color:var(--accent-fg);
+}
+.btn:hover{background:var(--accent-hi)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn.alt{background:var(--surface);color:var(--primary);box-shadow:var(--hair)}
+.btn.alt:hover{background:var(--inset)}
+.btn.sm{padding:7px 12px;font-size:13px}
+.btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}
+.hint{font-size:13px;color:var(--muted);margin:10px 0 0}
+.err{color:#D7261E;font-size:13.5px;margin:10px 0 0}
+html.dark .err{color:#FF8A80}
+
+/* readouts */
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(118px,1fr));gap:8px}
+.stat{background:var(--surface);border-radius:11px;padding:13px;box-shadow:var(--hair)}
+.stat b{display:block;font-family:"Bricolage Grotesque",sans-serif;font-size:20px;letter-spacing:-.02em;color:var(--primary)}
+.stat span{font-family:"Geist Mono",monospace;font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+.big{
+  font-family:"Bricolage Grotesque",sans-serif;font-weight:800;
+  font-size:clamp(27px,4.6vw,38px);letter-spacing:-.03em;line-height:1.08;color:var(--primary);
+}
+.out{
+  font-family:"Geist Mono",monospace;font-size:12.5px;background:var(--surface);
+  border-radius:11px;padding:13px;box-shadow:var(--hair);white-space:pre-wrap;
+  word-break:break-word;max-height:340px;overflow:auto;color:var(--body);
+}
+table.tb{width:100%;border-collapse:collapse;font-size:13.5px}
+table.tb th,table.tb td{padding:8px 6px;border-bottom:1px solid var(--line);text-align:right}
+table.tb th:first-child,table.tb td:first-child{text-align:left}
+table.tb th{font-family:"Geist Mono",monospace;font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);font-weight:400}
+table.tb tr:last-child td{border-bottom:0}
+
+/* dropzone */
+.drop{
+  border:1.5px dashed var(--line);border-radius:12px;background:var(--surface);
+  padding:34px 18px;text-align:center;cursor:pointer;transition:border-color .14s,background .14s;
+}
+.drop:hover{border-color:var(--accent-hi)}
+.drop.hot{border-color:var(--accent-hi);background:var(--inset)}
+.drop b{display:block;font-size:15.5px;font-weight:600;color:var(--primary)}
+.drop span{font-size:13px;color:var(--muted)}
+.thumbs{display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:9px;margin-top:13px}
+.th{border-radius:11px;overflow:hidden;background:var(--surface);box-shadow:var(--hair);position:relative}
+.th .im{height:86px;display:grid;place-items:center;overflow:hidden;background:var(--inset)}
+.th img{max-width:100%;max-height:100%}
+.th .nm{padding:5px 8px;font-family:"Geist Mono",monospace;font-size:9.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.th .bar2{display:flex;border-top:1px solid var(--line)}
+.th .bar2 button{flex:1;border:0;border-right:1px solid var(--line);background:none;color:var(--body);padding:5px 0;cursor:pointer;font-size:12px}
+.th .bar2 button:last-child{border-right:0}
+.th .bar2 button:hover{background:var(--accent);color:var(--accent-fg)}
+.th .ix{position:absolute;top:0;left:0;background:#000000b3;color:#fff;font-family:"Geist Mono",monospace;font-size:9.5px;padding:2px 6px;border-radius:0 0 7px 0}
+
+.hide{display:none!important}
+
+/* ═══ RESPONSIVE ═══ */
+@media (max-width:860px){
+  .app{grid-template-columns:1fr;padding:8px;gap:8px}
+  .rail{
+    position:fixed;left:8px;top:8px;bottom:8px;width:250px;z-index:60;
+    transform:translateX(-115%);transition:transform .22s cubic-bezier(.3,.8,.3,1);
+    box-shadow:var(--hair),0 12px 40px #00000038;
+  }
+  .rail.open{transform:none}
+  .burger{display:grid}
+  .scrim{position:fixed;inset:0;background:#00000059;z-index:55;opacity:0;pointer-events:none;transition:opacity .2s}
+  .scrim.on{opacity:1;pointer-events:auto}
+  .pad{padding:18px 14px 36px}
+  .bench{padding:20px 14px 48px}
+  .panel{padding:16px}
+  .views{display:none}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+
+<link rel="canonical" href="https://koljacks.github.io/Toolshed/t/uuid-generator/">
+<meta property="og:type" content="website">
+<meta property="og:title" content="UUID Generator — Toolshed">
+<meta property="og:description" content="Generate v4 UUIDs, one or a thousand, ready to copy. Free, runs in your browser, nothing is uploaded.">
+<meta property="og:url" content="https://koljacks.github.io/Toolshed/t/uuid-generator/">
+<meta property="og:site_name" content="Toolshed">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="UUID Generator">
+<meta name="twitter:description" content="Generate v4 UUIDs, one or a thousand, ready to copy. Free, runs in your browser, nothing is uploaded.">
+<meta name="keywords" content="UUID Generator, Developer, uuid, guid, identifier, random, v4, unique, id">
+<script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "UUID Generator",
+  "description": "Generate v4 UUIDs, one or a thousand, ready to copy.",
+  "url": "https://koljacks.github.io/Toolshed/t/uuid-generator/",
+  "applicationCategory": "UtilitiesApplication",
+  "operatingSystem": "Any (runs in a web browser)",
+  "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "INR"
+  },
+  "isAccessibleForFree": true,
+  "browserRequirements": "Requires JavaScript",
+  "publisher": {
+    "@type": "Organization",
+    "name": "Toolshed",
+    "url": "https://koljacks.github.io/Toolshed/"
+  }
+}</script>
+<script>
+/* Land straight on this tool. Runs before the app boots, so the router
+   picks the hash up on its first pass — no flash of the index. */
+if (!location.hash) history.replaceState(null, '', '#/uuid-generator');
+</script>
+</head>
+<body>
+
+<div class="app">
+  <aside class="rail" id="rail">
+    <div class="rail-hd"><span class="logo">◆</span><b>Toolshed</b></div>
+    <nav id="nav"></nav>
+    <div class="rail-ft">Free forever. Everything runs on your device — no uploads, no accounts.</div>
+  </aside>
+
+  <main class="stage" id="stage">
+    <div class="bar">
+      <button class="ib burger" id="burger" aria-label="Menu">☰</button>
+      <div class="crumbs"><button id="home">Toolshed</button><span>›</span><span class="cur" id="cur">All tools</span></div>
+      <span class="sp"></span>
+      <button class="ib" id="favBtn" aria-pressed="false" aria-label="Show saved tools">★</button>
+      <button class="ib" id="theme" aria-label="Switch theme">◐</button>
+    </div>
+    <div id="view"></div>
+  </main>
+</div>
+
+<section id="about-tool" style="max-width:820px;margin:0 auto;padding:8px 22px 56px">
+  <h2 style="font-family:'Bricolage Grotesque',sans-serif;font-size:19px;margin:28px 0 8px">About UUID Generator</h2>
+  <p style="color:var(--muted);font-size:14.5px">Generate v4 UUIDs, one or a thousand, ready to copy. It runs entirely inside your browser — your files are never uploaded to a server, there is no signup, and there is no watermark on anything you produce.</p>
+  <h2 style="font-family:'Bricolage Grotesque',sans-serif;font-size:19px;margin:28px 0 8px">How it works</h2>
+  <ol style="color:var(--muted);font-size:14.5px;padding-left:20px;line-height:1.9">
+    <li>Open UUID Generator above.</li>
+    <li>Add your file or enter your details — nothing leaves your device.</li>
+    <li>Adjust the options, then download the result.</li>
+  </ol>
+  <h2 style="font-family:'Bricolage Grotesque',sans-serif;font-size:19px;margin:28px 0 8px">More Developer tools</h2>
+  <ul style="columns:2;font-size:14.5px;padding-left:20px;line-height:1.9">
+    <li><a href="https://koljacks.github.io/Toolshed/t/json-formatter/" style="color:var(--muted)">JSON Formatter</a></li>
+    <li><a href="https://koljacks.github.io/Toolshed/t/base64/" style="color:var(--muted)">Base64 Encoder / Decoder</a></li>
+    <li><a href="https://koljacks.github.io/Toolshed/t/password-generator/" style="color:var(--muted)">Password Generator</a></li>
+    <li><a href="https://koljacks.github.io/Toolshed/t/qr-code/" style="color:var(--muted)">QR Code Generator</a></li>
+  </ul>
+  <p style="font-size:14.5px;margin-top:24px"><a href="https://koljacks.github.io/Toolshed/" style="color:var(--muted)">← All 44 free tools</a></p>
+</section>
+<div class="scrim" id="scrim"></div>
+
+<script>
+/* ==================================================================
+   TOOLSHED — a whole tools site in one file.
+
+   ADD A TOOL: push one object onto TOOLS. Everything else — the rail,
+   search, filters, favourites, routing, dark mode — picks it up free.
+
+     TOOLS.push({
+       id:'tip-calculator', name:'Tip Calculator', cat:'Money',
+       glyph:'#', blurb:'One line for the card.', tags:'bill split',
+       isNew:true,                       // optional NEW ribbon
+       ui:  function(){ return `<div class="panel">...</div>`; },
+       init:function(root){ ... }        // root = the mounted container
+     });
+
+   cat must exist in HUE below, or add a colour for it there.
+   ================================================================== */
+(function(){
+"use strict";
+
+/* ---------- tiny helpers used by many tools ---------- */
+var $  = function(sel, root){ return (root||document).querySelector(sel); };
+var $$ = function(sel, root){ return Array.prototype.slice.call((root||document).querySelectorAll(sel)); };
+var esc = function(s){ return String(s).replace(/[&<>"]/g, function(c){
+  return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); };
+var inr = function(n){ return '₹' + Math.round(n).toLocaleString('en-IN'); };
+var num = function(n, d){ return Number(n).toLocaleString('en-IN', {maximumFractionDigits: d===undefined?2:d}); };
+var kb  = function(b){ return b < 1048576 ? (b/1024).toFixed(0)+' KB' : (b/1048576).toFixed(2)+' MB'; };
+
+function download(href, name){
+  var a = document.createElement('a');
+  a.href = href; a.download = name;
+  document.body.appendChild(a); a.click(); a.remove();
+}
+function copy(text, btn){
+  var done = function(){ var t = btn.textContent; btn.textContent = 'Copied'; setTimeout(function(){ btn.textContent = t; }, 1200); };
+  if(navigator.clipboard) navigator.clipboard.writeText(text).then(done, function(){});
+  else { var ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); done(); }
+}
+/* lazy-load a CDN script only when a tool that needs it is opened */
+var loaded = {};
+function need(url){
+  if(loaded[url]) return loaded[url];
+  loaded[url] = new Promise(function(res, rej){
+    var s = document.createElement('script');
+    s.src = url; s.onload = res; s.onerror = function(){ rej(new Error('load failed')); };
+    document.head.appendChild(s);
+  });
+  return loaded[url];
+}
+/* read an image file into an <img> plus its data URL */
+function readImage(file){
+  return new Promise(function(res, rej){
+    var r = new FileReader();
+    r.onload = function(){
+      var i = new Image();
+      i.onload = function(){ res({ img:i, data:r.result, name:file.name, size:file.size }); };
+      i.onerror = rej; i.src = r.result;
+    };
+    r.onerror = rej; r.readAsDataURL(file);
+  });
+}
+/* attach drag-and-drop + click-to-browse to a .drop element */
+function dropzone(zone, accept, onFiles){
+  var inp = document.createElement('input');
+  inp.type = 'file'; inp.accept = accept; inp.multiple = true; inp.className = 'hide';
+  zone.parentNode.appendChild(inp);
+  zone.addEventListener('click', function(){ inp.click(); });
+  inp.addEventListener('change', function(){ onFiles(inp.files); inp.value = ''; });
+  ['dragenter','dragover'].forEach(function(e){ zone.addEventListener(e, function(ev){ ev.preventDefault(); zone.classList.add('hot'); }); });
+  ['dragleave','drop'].forEach(function(e){ zone.addEventListener(e, function(ev){ ev.preventDefault(); zone.classList.remove('hot'); }); });
+  zone.addEventListener('drop', function(ev){ onFiles(ev.dataTransfer.files); });
+}
+/* canvas resize/convert shared by the three image tools */
+function drawTo(img, w, h, type, quality){
+  var c = document.createElement('canvas');
+  c.width = Math.max(1, Math.round(w)); c.height = Math.max(1, Math.round(h));
+  var x = c.getContext('2d');
+  if(type === 'image/jpeg'){ x.fillStyle = '#fff'; x.fillRect(0,0,c.width,c.height); }
+  x.imageSmoothingQuality = 'high';
+  x.drawImage(img, 0, 0, c.width, c.height);
+  return c.toDataURL(type, quality);
+}
+function dataSize(dataUrl){
+  var i = dataUrl.indexOf(',');
+  return Math.round((dataUrl.length - i - 1) * 3 / 4);
+}
+
+/* ==================================================================
+   THE REGISTRY
+   ================================================================== */
+var TOOLS = [];
+
+/* ---------------------------------------------------------------- 
+   PDF & DOCUMENTS
+   ---------------------------------------------------------------- */
+TOOLS.push({
+  id:'images-to-pdf', name:'Images to PDF', cat:'PDF', glyph:'▤',
+  blurb:'Combine JPG, PNG or WEBP photos into one PDF, in your chosen order.',
+  tags:'jpg png webp merge combine scan document',
+  ui:function(){ return `
+    <div class="panel">
+      <div class="drop" id="dz"><b>Drop images here</b><span>or press to browse</span></div>
+      <div class="thumbs" id="th"></div>
+    </div>
+    <div class="panel" id="opts" hidden>
+      <div class="row">
+        <label class="f"><span>Page size</span><select id="size">
+          <option value="fit">Fit to image</option><option value="a4">A4</option><option value="letter">Letter</option>
+        </select></label>
+        <label class="f"><span>Orientation</span><select id="ori">
+          <option value="auto">Auto</option><option value="portrait">Portrait</option><option value="landscape">Landscape</option>
+        </select></label>
+        <label class="f"><span>Margin</span><select id="mg">
+          <option value="0">None</option><option value="24" selected>Small</option><option value="56">Wide</option>
+        </select></label>
+        <label class="f"><span>File name</span><input id="fn" type="text" value="document"></label>
+      </div>
+      <div class="btns"><button class="btn" id="go">Create PDF</button><button class="btn alt" id="clr">Remove all</button></div>
+      <p class="hint" id="msg"></p>
+    </div>`;
+  },
+  init:function(root){
+    var items = [], th = $('#th', root), opts = $('#opts', root);
+    function paint(){
+      th.innerHTML = items.map(function(it,i){ return `
+        <div class="th"><span class="ix">${String(i+1).padStart(2,'0')}</span>
+          <div class="im"><img src="${it.data}" alt="" style="transform:rotate(${it.rot}deg)"></div>
+          <div class="nm">${esc(it.name)}</div>
+          <div class="bar"><button data-a="l" data-i="${i}">‹</button><button data-a="r" data-i="${i}">⟳</button><button data-a="x" data-i="${i}">✕</button><button data-a="rr" data-i="${i}">›</button></div>
+        </div>`; }).join('');
+      opts.hidden = !items.length;
+    }
+    th.addEventListener('click', function(e){
+      var b = e.target.closest('button'); if(!b) return;
+      var i = +b.dataset.i, a = b.dataset.a;
+      if(a==='x') items.splice(i,1);
+      if(a==='r') items[i].rot = (items[i].rot+90)%360;
+      if(a==='l' && i>0) items.splice(i-1,0,items.splice(i,1)[0]);
+      if(a==='rr'&& i<items.length-1) items.splice(i+1,0,items.splice(i,1)[0]);
+      paint();
+    });
+    dropzone($('#dz',root), 'image/*', function(files){
+      Array.prototype.slice.call(files).filter(function(f){ return /^image\//.test(f.type); })
+        .forEach(function(f){ readImage(f).then(function(o){
+          items.push({data:o.data, img:o.img, name:o.name, w:o.img.naturalWidth, h:o.img.naturalHeight, rot:0}); paint(); }); });
+    });
+    $('#clr',root).addEventListener('click', function(){ items = []; paint(); });
+    $('#go',root).addEventListener('click', function(){
+      var btn = this, msg = $('#msg',root);
+      btn.disabled = true; msg.textContent = 'Building…';
+      need('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js').then(function(){
+        var mode = $('#size',root).value, ori = $('#ori',root).value, mg = +$('#mg',root).value;
+        var doc = null;
+        items.forEach(function(it){
+          var flip = it.rot % 180 !== 0;
+          var iw = flip ? it.h : it.w, ih = flip ? it.w : it.h;
+          var data = it.data;
+          if(it.rot){
+            var c = document.createElement('canvas'); c.width = iw; c.height = ih;
+            var x = c.getContext('2d');
+            x.fillStyle = '#fff'; x.fillRect(0,0,iw,ih);
+            x.translate(iw/2, ih/2); x.rotate(it.rot*Math.PI/180);
+            x.drawImage(it.img, -it.w/2, -it.h/2);
+            data = c.toDataURL('image/jpeg', .92);
+          }
+          var fmt = (mode==='fit') ? [iw+mg*2, ih+mg*2] : mode;
+          var o = ori==='auto' ? (iw>ih?'landscape':'portrait') : ori;
+          if(mode==='fit') o = (iw>ih) ? 'landscape' : 'portrait';
+          if(!doc) doc = new window.jspdf.jsPDF({unit:'px', orientation:o, format:fmt, compress:true});
+          else doc.addPage(fmt, o);
+          var W = doc.internal.pageSize.getWidth(), H = doc.internal.pageSize.getHeight();
+          var r = Math.min((W-mg*2)/iw, (H-mg*2)/ih), dw = iw*r, dh = ih*r;
+          doc.addImage(data, 'JPEG', (W-dw)/2, (H-dh)/2, dw, dh, undefined, 'FAST');
+        });
+        doc.save(($('#fn',root).value || 'document') + '.pdf');
+        msg.textContent = 'Saved ' + items.length + ' page' + (items.length>1?'s':'') + '.';
+      }).catch(function(){ msg.textContent = 'The PDF engine could not load. Check your connection and try again.'; })
+        .then(function(){ btn.disabled = false; });
+    });
+    paint();
+  }
+});
+
+/* ---------------------------------------------------------------- 
+   IMAGE
+   ---------------------------------------------------------------- */
+TOOLS.push({
+  id:'image-compressor', name:'Image Compressor', cat:'Image', glyph:'⊙',
+  blurb:'Shrink photos to a smaller file size, with the quality dial in your hands.',
+  tags:'compress reduce size optimise jpeg quality',
+  ui:function(){ return `
+    <div class="panel">
+      <div class="drop" id="dz"><b>Drop an image here</b><span>JPG, PNG or WEBP</span></div>
+      <div id="work" hidden>
+        <label class="f" style="margin-top:16px"><span>Quality — <span id="qv">70</span>%</span>
+          <input type="range" id="q" min="10" max="100" value="70"></label>
+        <div class="stats" style="margin-top:14px">
+          <div class="stat"><b id="s1">–</b><span>Original</span></div>
+          <div class="stat"><b id="s2">–</b><span>Compressed</span></div>
+          <div class="stat"><b id="s3">–</b><span>Saved</span></div>
+        </div>
+        <div class="thumbs"><div class="th"><div class="im" style="height:200px"><img id="pv" alt=""></div></div></div>
+        <div class="btns"><button class="btn" id="go">Download</button></div>
+      </div>
+    </div>`;
+  },
+  init:function(root){
+    var src = null, out = '';
+    function run(){
+      if(!src) return;
+      var q = +$('#q',root).value;
+      $('#qv',root).textContent = q;
+      out = drawTo(src.img, src.img.naturalWidth, src.img.naturalHeight, 'image/jpeg', q/100);
+      var os = src.size, ns = dataSize(out);
+      $('#s1',root).textContent = kb(os);
+      $('#s2',root).textContent = kb(ns);
+      $('#s3',root).textContent = Math.max(0, Math.round((1-ns/os)*100)) + '%';
+      $('#pv',root).src = out;
+    }
+    dropzone($('#dz',root), 'image/*', function(f){
+      if(!f[0]) return;
+      readImage(f[0]).then(function(o){ src = o; $('#work',root).hidden = false; run(); });
+    });
+    $('#q',root).addEventListener('input', run);
+    $('#go',root).addEventListener('click', function(){
+      if(out) download(out, src.name.replace(/\.\w+$/,'') + '-compressed.jpg');
+    });
+  }
+});
+
+TOOLS.push({
+  id:'image-resizer', name:'Image Resizer', cat:'Image', glyph:'⤢',
+  blurb:'Resize an image to exact pixel dimensions, with the aspect ratio locked by default.',
+  tags:'resize scale dimensions pixels width height',
+  ui:function(){ return `
+    <div class="panel">
+      <div class="drop" id="dz"><b>Drop an image here</b><span>JPG, PNG or WEBP</span></div>
+      <div id="work" hidden>
+        <div class="row" style="margin-top:16px">
+          <label class="f"><span>Width (px)</span><input type="number" id="w" min="1"></label>
+          <label class="f"><span>Height (px)</span><input type="number" id="h" min="1"></label>
+          <label class="f"><span>Lock ratio</span><select id="lock"><option value="1">Yes</option><option value="0">No</option></select></label>
+        </div>
+        <p class="hint" id="orig"></p>
+        <div class="btns"><button class="btn" id="go">Download</button></div>
+      </div>
+    </div>`;
+  },
+  init:function(root){
+    var src = null, ratio = 1, lock = true;
+    var w = $('#w',root), h = $('#h',root);
+    dropzone($('#dz',root), 'image/*', function(f){
+      if(!f[0]) return;
+      readImage(f[0]).then(function(o){
+        src = o; ratio = o.img.naturalWidth / o.img.naturalHeight;
+        w.value = o.img.naturalWidth; h.value = o.img.naturalHeight;
+        $('#orig',root).textContent = 'Original: ' + o.img.naturalWidth + ' × ' + o.img.naturalHeight + ' px';
+        $('#work',root).hidden = false;
+      });
+    });
+    $('#lock',root).addEventListener('change', function(){ lock = this.value === '1'; });
+    w.addEventListener('input', function(){ if(lock && w.value) h.value = Math.round(w.value/ratio); });
+    h.addEventListener('input', function(){ if(lock && h.value) w.value = Math.round(h.value*ratio); });
+    $('#go',root).addEventListener('click', function(){
+      if(!src) return;
+      var type = /png$/i.test(src.name) ? 'image/png' : 'image/jpeg';
+      var d = drawTo(src.img, +w.value, +h.value, type, .92);
+      download(d, src.name.replace(/\.\w+$/,'') + '-' + w.value + 'x' + h.value + (type==='image/png'?'.png':'.jpg'));
+    });
+  }
+});
+
+TOOLS.push({
+  id:'image-converter', name:'Image Converter', cat:'Image', glyph:'⇄',
+  blurb:'Convert between JPG, PNG and WEBP. Handles several files in one go.',
+  tags:'jpg jpeg png webp format convert change',
+  ui:function(){ return `
+    <div class="panel">
+      <div class="drop" id="dz"><b>Drop images here</b><span>convert one or many at once</span></div>
+      <div id="work" hidden>
+        <div class="row" style="margin-top:16px">
+          <label class="f"><span>Convert to</span><select id="fmt">
+            <option value="image/jpeg">JPG</option><option value="image/png">PNG</option><option value="image/webp">WEBP</option>
+          </select></label>
+          <label class="f"><span>Quality (JPG/WEBP)</span><input type="range" id="q" min="10" max="100" value="90"></label>
+        </div>
+        <p class="hint" id="cnt"></p>
+        <div class="btns"><button class="btn" id="go">Download all</button></div>
+      </div>
+    </div>`;
+  },
+  init:function(root){
+    var list = [];
+    dropzone($('#dz',root), 'image/*', function(files){
+      Array.prototype.slice.call(files).filter(function(f){ return /^image\//.test(f.type); })
+        .forEach(function(f){ readImage(f).then(function(o){
+          list.push(o);
+          $('#work',root).hidden = false;
+          $('#cnt',root).textContent = list.length + ' image' + (list.length>1?'s':'') + ' ready.';
+        }); });
+    });
+    $('#go',root).addEventListener('click', function(){
+      var type = $('#fmt',root).value, q = +$('#q',root).value/100;
+      var ext = {'image/jpeg':'.jpg','image/png':'.png','image/webp':'.webp'}[type];
+      list.forEach(function(o, i){
+        setTimeout(function(){
+          var d = drawTo(o.img, o.img.naturalWidth, o.img.naturalHeight, type, q);
+          download(d, o.name.replace(/\.\w+$/,'') + ext);
+        }, i*250);
+      });
+    });
+  }
+});
+
+/* ---------------------------------------------------------------- 
+   TEXT
+   ---------------------------------------------------------------- */
+TOOLS.push({
+  id:'word-counter', name:'Word Counter', cat:'Text', glyph:'¶',
+  blurb:'Live word, character, sentence and reading-time counts as you type.',
+  tags:'words characters letters count reading time essay',
+  ui:function(){ return `
+    <div class="panel">
+      <label class="f"><span>Your text</span><textarea id="t" placeholder="Paste or type here…"></textarea></label>
+      <div class="stats" style="margin-top:14px">
+        <div class="stat"><b id="a">0</b><span>Words</span></div>
+        <div class="stat"><b id="b">0</b><span>Characters</span></div>
+        <div class="stat"><b id="c">0</b><span>No spaces</span></div>
+        <div class="stat"><b id="d">0</b><span>Sentences</span></div>
+        <div class="stat"><b id="e">0</b><span>Paragraphs</span></div>
+        <div class="stat"><b id="f">0m</b><span>Read time</span></div>
+      </div>
+    </div>`;
+  },
+  init:function(root){
+    var t = $('#t',root);
+    t.addEventListener('input', function(){
+      var v = t.value;
+      var words = (v.match(/\S+/g) || []).length;
+      $('#a',root).textContent = words;
+      $('#b',root).textContent = v.length;
+      $('#c',root).textContent = v.replace(/\s/g,'').length;
+      $('#d',root).textContent = (v.match(/[^.!?…]+[.!?…]+/g) || []).length;
+      $('#e',root).textContent = v.trim() ? v.trim().split(/\n{2,}/).length : 0;
+      $('#f',root).textContent = Math.max(0, Math.ceil(words/225)) + 'm';
+    });
+  }
+});
+
+TOOLS.push({
+  id:'case-converter', name:'Case Converter', cat:'Text', glyph:'Aa',
+  blurb:'Switch text between sentence, title, upper, lower, camel, snake and kebab case.',
+  tags:'uppercase lowercase title sentence camel snake kebab slug',
+  ui:function(){ return `
+    <div class="panel">
+      <label class="f"><span>Your text</span><textarea id="t" placeholder="Type or paste here…"></textarea></label>
+      <div class="btns">
+        <button class="btn alt sm" data-c="upper">UPPER</button>
+        <button class="btn alt sm" data-c="lower">lower</button>
+        <button class="btn alt sm" data-c="title">Title Case</button>
+        <button class="btn alt sm" data-c="sentence">Sentence case</button>
+        <button class="btn alt sm" data-c="camel">camelCase</button>
+        <button class="btn alt sm" data-c="snake">snake_case</button>
+        <button class="btn alt sm" data-c="kebab">kebab-case</button>
+      </div>
+      <div class="btns"><button class="btn" id="cp">Copy result</button></div>
+    </div>`;
+  },
+  init:function(root){
+    var t = $('#t',root);
+    var words = function(s){ return s.replace(/[_-]+/g,' ').replace(/([a-z])([A-Z])/g,'$1 $2').split(/\s+/).filter(Boolean); };
+    var F = {
+      upper:function(s){ return s.toUpperCase(); },
+      lower:function(s){ return s.toLowerCase(); },
+      title:function(s){ return s.toLowerCase().replace(/\b\w/g, function(c){ return c.toUpperCase(); }); },
+      sentence:function(s){ return s.toLowerCase().replace(/(^\s*\w|[.!?]\s+\w)/g, function(c){ return c.toUpperCase(); }); },
+      camel:function(s){ return words(s).map(function(w,i){ w = w.toLowerCase(); return i ? w.charAt(0).toUpperCase()+w.slice(1) : w; }).join(''); },
+      snake:function(s){ return words(s).map(function(w){ return w.toLowerCase(); }).join('_'); },
+      kebab:function(s){ return words(s).map(function(w){ return w.toLowerCase(); }).join('-'); }
+    };
+    root.addEventListener('click', function(e){
+      var b = e.target.closest('[data-c]'); if(!b) return;
+      t.value = F[b.dataset.c](t.value);
+    });
+    $('#cp',root).addEventListener('click', function(){ copy(t.value, this); });
+  }
+});
+
+TOOLS.push({
+  id:'text-cleaner', name:'Text Cleaner', cat:'Text', glyph:'✧',
+  blurb:'Strip blank lines, duplicate lines, extra spaces and stray line breaks in one pass.',
+  tags:'trim whitespace duplicates blank lines tidy clean',
+  ui:function(){ return `
+    <div class="panel">
+      <label class="f"><span>Your text</span><textarea id="t" placeholder="Paste messy text here…"></textarea></label>
+      <div class="row" style="margin-top:14px">
+        <label class="f"><span>Trim each line</span><select id="o1"><option value="1">Yes</option><option value="0">No</option></select></label>
+        <label class="f"><span>Remove blank lines</span><select id="o2"><option value="1">Yes</option><option value="0">No</option></select></label>
+        <label class="f"><span>Remove duplicates</span><select id="o3"><option value="0">No</option><option value="1">Yes</option></select></label>
+        <label class="f"><span>Collapse spaces</span><select id="o4"><option value="1">Yes</option><option value="0">No</option></select></label>
+      </div>
+      <div class="btns"><button class="btn" id="go">Clean</button><button class="btn alt" id="cp">Copy</button></div>
+      <p class="hint" id="msg"></p>
+    </div>`;
+  },
+  init:function(root){
+    $('#go',root).addEventListener('click', function(){
+      var t = $('#t',root), lines = t.value.split('\n');
+      var before = lines.length;
+      if($('#o1',root).value==='1') lines = lines.map(function(l){ return l.trim(); });
+      if($('#o4',root).value==='1') lines = lines.map(function(l){ return l.replace(/[ \t]{2,}/g,' '); });
+      if($('#o2',root).value==='1') lines = lines.filter(function(l){ return l.trim() !== ''; });
+      if($('#o3',root).value==='1'){ var seen = {}; lines = lines.filter(function(l){ if(seen[l]) return false; seen[l] = 1; return true; }); }
+      t.value = lines.join('\n');
+      $('#msg',root).textContent = before + ' lines in, ' + lines.length + ' out.';
+    });
+    $('#cp',root).addEventListener('click', function(){ copy($('#t',root).value, this); });
+  }
+});
+
+TOOLS.push({
+  id:'lorem-ipsum', name:'Lorem Ipsum Generator', cat:'Text', glyph:'≡',
+  blurb:'Generate placeholder paragraphs, sentences or words for mockups.',
+  tags:'placeholder dummy filler text mockup design',
+  ui:function(){ return `
+    <div class="panel">
+      <div class="row">
+        <label class="f"><span>How many</span><input type="number" id="n" value="3" min="1" max="50"></label>
+        <label class="f"><span>Of what</span><select id="u"><option value="p">Paragraphs</option><option value="s">Sentences</option><option value="w">Words</option></select></label>
+      </div>
+      <div class="btns"><button class="btn" id="go">Generate</button><button class="btn alt" id="cp">Copy</button></div>
+      <div class="out" id="o" style="margin-top:14px">Press generate.</div>
+    </div>`;
+  },
+  init:function(root){
+    var W = ('lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor incididunt ut labore et dolore magna aliqua enim ad minim veniam quis nostrud exercitation ullamco laboris nisi aliquip ex ea commodo consequat duis aute irure in reprehenderit voluptate velit esse cillum eu fugiat nulla pariatur excepteur sint occaecat cupidatat non proident sunt culpa qui officia deserunt mollit anim id est laborum').split(' ');
+    var pick = function(){ return W[Math.floor(Math.random()*W.length)]; };
+    function sentence(){
+      var n = 8 + Math.floor(Math.random()*10), a = [];
+      for(var i=0;i<n;i++) a.push(pick());
+      return a.join(' ').replace(/^\w/, function(c){ return c.toUpperCase(); }) + '.';
+    }
+    $('#go',root).addEventListener('click', function(){
+      var n = Math.min(50, Math.max(1, +$('#n',root).value||1)), u = $('#u',root).value, out = [];
+      if(u === 'w'){ for(var i=0;i<n;i++) out.push(pick()); out = [out.join(' ')]; }
+      else if(u === 's'){ for(var j=0;j<n;j++) out.push(sentence()); out = [out.join(' ')]; }
+      else { for(var k=0;k<n;k++){ var s = []; for(var m=0;m<4+Math.floor(Math.random()*3);m++) s.push(sentence()); out.push(s.join(' ')); } }
+      $('#o',root).textContent = out.join('\n\n');
+    });
+    $('#cp',root).addEventListener('click', function(){ copy($('#o',root).textContent, this); });
+  }
+});
+
+/* ---------------------------------------------------------------- 
+   DEVELOPER
+   ---------------------------------------------------------------- */
+TOOLS.push({
+  id:'json-formatter', name:'JSON Formatter', cat:'Developer', glyph:'{}',
+  blurb:'Format, minify and validate JSON, with the error position called out.',
+  tags:'json beautify pretty print minify validate parse',
+  ui:function(){ return `
+    <div class="panel">
+      <label class="f"><span>JSON</span><textarea id="t" class="mono" placeholder='{"hello":"world"}'></textarea></label>
+      <div class="btns">
+        <button class="btn" id="fmt">Format</button>
+        <button class="btn alt" id="min">Minify</button>
+        <button class="btn alt" id="cp">Copy</button>
+      </div>
+      <p class="hint" id="msg"></p>
+    </div>`;
+  },
+  init:function(root){
+    var t = $('#t',root), msg = $('#msg',root);
+    function run(indent){
+      try{
+        var v = JSON.parse(t.value);
+        t.value = JSON.stringify(v, null, indent);
+        msg.className = 'hint';
+        msg.textContent = 'Valid JSON — ' + (Array.isArray(v) ? v.length + ' items' : typeof v === 'object' && v ? Object.keys(v).length + ' keys' : typeof v) + '.';
+      }catch(err){
+        msg.className = 'err';
+        msg.textContent = String(err.message);
+      }
+    }
+    $('#fmt',root).addEventListener('click', function(){ run(2); });
+    $('#min',root).addEventListener('click', function(){ run(0); });
+    $('#cp',root).addEventListener('click', function(){ copy(t.value, this); });
+  }
+});
+
+TOOLS.push({
+  id:'base64', name:'Base64 Encoder / Decoder', cat:'Developer', glyph:'⧉',
+  blurb:'Encode text to Base64 and back, with full Unicode support.',
+  tags:'base64 encode decode btoa atob unicode',
+  ui:function(){ return `
+    <div class="panel">
+      <label class="f"><span>Input</span><textarea id="a" class="mono"></textarea></label>
+      <div class="btns"><button class="btn" id="e">Encode ↓</button><button class="btn alt" id="d">Decode ↓</button><button class="btn alt" id="cp">Copy result</button></div>
+      <label class="f" style="margin-top:14px"><span>Result</span><textarea id="b" class="mono" readonly></textarea></label>
+      <p class="hint" id="msg"></p>
+    </div>`;
+  },
+  init:function(root){
+    var a = $('#a',root), b = $('#b',root), msg = $('#msg',root);
+    $('#e',root).addEventListener('click', function(){
+      try{ b.value = btoa(String.fromCharCode.apply(null, new TextEncoder().encode(a.value))); msg.textContent = ''; }
+      catch(e){ msg.className='err'; msg.textContent = 'That text could not be encoded.'; }
+    });
+    $('#d',root).addEventListener('click', function(){
+      try{
+        var bin = atob(a.value.trim());
+        var bytes = new Uint8Array(bin.length);
+        for(var i=0;i<bin.length;i++) bytes[i] = bin.charCodeAt(i);
+        b.value = new TextDecoder().decode(bytes);
+        msg.className='hint'; msg.textContent = '';
+      }catch(e){ msg.className='err'; msg.textContent = 'That is not valid Base64.'; }
+    });
+    $('#cp',root).addEventListener('click', function(){ copy(b.value, this); });
+  }
+});
+
+TOOLS.push({
+  id:'uuid-generator', name:'UUID Generator', cat:'Developer', glyph:'#',
+  blurb:'Generate v4 UUIDs, one or a thousand, ready to copy.',
+  tags:'uuid guid identifier random v4 unique id',
+  ui:function(){ return `
+    <div class="panel">
+      <div class="row">
+        <label class="f"><span>How many</span><input type="number" id="n" value="5" min="1" max="1000"></label>
+        <label class="f"><span>Format</span><select id="f"><option value="l">Lowercase</option><option value="u">Uppercase</option><option value="b">Braced {…}</option></select></label>
+      </div>
+      <div class="btns"><button class="btn" id="go">Generate</button><button class="btn alt" id="cp">Copy</button></div>
+      <div class="out" id="o" style="margin-top:14px">Press generate.</div>
+    </div>`;
+  },
+  init:function(root){
+    function uuid(){
+      if(crypto.randomUUID) return crypto.randomUUID();
+      var b = crypto.getRandomValues(new Uint8Array(16));
+      b[6] = (b[6] & 0x0f) | 0x40; b[8] = (b[8] & 0x3f) | 0x80;
+      var h = Array.prototype.map.call(b, function(x){ return ('0'+x.toString(16)).slice(-2); }).join('');
+      return [h.slice(0,8),h.slice(8,12),h.slice(12,16),h.slice(16,20),h.slice(20)].join('-');
+    }
+    $('#go',root).addEventListener('click', function(){
+      var n = Math.min(1000, Math.max(1, +$('#n',root).value||1)), f = $('#f',root).value, a = [];
+      for(var i=0;i<n;i++){
+        var u = uuid();
+        if(f==='u') u = u.toUpperCase();
+        if(f==='b') u = '{'+u+'}';
+        a.push(u);
+      }
+      $('#o',root).textContent = a.join('\n');
+    });
+    $('#cp',root).addEventListener('click', function(){ copy($('#o',root).textContent, this); });
+  }
+});
+
+TOOLS.push({
+  id:'password-generator', name:'Password Generator', cat:'Developer', glyph:'⚿',
+  blurb:'Build a strong random password using your browser’s cryptographic randomness.',
+  tags:'password random secure strong generate passphrase',
+  ui:function(){ return `
+    <div class="panel">
+      <div class="big mono" id="pw" style="word-break:break-all;font-size:clamp(19px,3.4vw,28px)">—</div>
+      <p class="hint" id="str"></p>
+      <label class="f" style="margin-top:16px"><span>Length — <span id="lv">16</span></span><input type="range" id="len" min="6" max="64" value="16"></label>
+      <div class="row" style="margin-top:6px">
+        <label class="f"><span>Uppercase</span><select id="u"><option value="1">Yes</option><option value="0">No</option></select></label>
+        <label class="f"><span>Numbers</span><select id="n"><option value="1">Yes</option><option value="0">No</option></select></label>
+        <label class="f"><span>Symbols</span><select id="s"><option value="1">Yes</option><option value="0">No</option></select></label>
+        <label class="f"><span>Avoid l 1 O 0</span><select id="x"><option value="1">Yes</option><option value="0">No</option></select></label>
+      </div>
+      <div class="btns"><button class="btn" id="go">Generate</button><button class="btn alt" id="cp">Copy</button></div>
+    </div>`;
+  },
+  init:function(root){
+    function gen(){
+      var set = 'abcdefghijklmnopqrstuvwxyz';
+      if($('#u',root).value==='1') set += 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+      if($('#n',root).value==='1') set += '0123456789';
+      if($('#s',root).value==='1') set += '!@#$%^&*()-_=+[]{};:,.?';
+      if($('#x',root).value==='1') set = set.replace(/[l1O0I]/g,'');
+      var len = +$('#len',root).value;
+      $('#lv',root).textContent = len;
+      var arr = crypto.getRandomValues(new Uint32Array(len)), out = '';
+      for(var i=0;i<len;i++) out += set[arr[i] % set.length];
+      $('#pw',root).textContent = out;
+      var bits = Math.round(len * Math.log2(set.length));
+      $('#str',root).textContent = 'About ' + bits + ' bits of entropy — ' +
+        (bits < 50 ? 'weak, lengthen it' : bits < 80 ? 'fine for everyday accounts' : 'strong enough for anything');
+    }
+    ['#len','#u','#n','#s','#x'].forEach(function(s){ $(s,root).addEventListener('input', gen); });
+    $('#go',root).addEventListener('click', gen);
+    $('#cp',root).addEventListener('click', function(){ copy($('#pw',root).textContent, this); });
+    gen();
+  }
+});
+
+TOOLS.push({
+  id:'qr-code', name:'QR Code Generator', cat:'Developer', glyph:'▩',
+  blurb:'Turn a link, UPI ID or any text into a QR code and download it as a PNG.',
+  tags:'qr code barcode link url upi scan png',
+  ui:function(){ return `
+    <div class="panel">
+      <label class="f"><span>Link or text</span><input type="text" id="t" value="https://example.com" placeholder="https://…"></label>
+      <div class="row" style="margin-top:14px">
+        <label class="f"><span>Size (px)</span><select id="s"><option>256</option><option selected>512</option><option>1024</option></select></label>
+        <label class="f"><span>Error correction</span><select id="e"><option value="L">Low</option><option value="M" selected>Medium</option><option value="Q">Quartile</option><option value="H">High</option></select></label>
+      </div>
+      <div class="btns"><button class="btn" id="go">Create QR code</button><button class="btn alt" id="dl">Download PNG</button></div>
+      <div id="box" style="margin-top:18px;display:grid;place-items:center;min-height:60px"></div>
+      <p class="hint" id="msg"></p>
+    </div>`;
+  },
+  init:function(root){
+    var box = $('#box',root);
+    function make(){
+      var text = $('#t',root).value.trim();
+      if(!text){ $('#msg',root).textContent = 'Enter some text or a link first.'; return; }
+      $('#msg',root).textContent = 'Building…';
+      need('https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js').then(function(){
+        box.innerHTML = '';
+        var s = +$('#s',root).value;
+        new window.QRCode(box, {
+          text: text, width: s, height: s,
+          correctLevel: window.QRCode.CorrectLevel[$('#e',root).value]
+        });
+        var img = box.querySelector('img, canvas');
+        if(img) img.style.maxWidth = '100%';
+        $('#msg',root).textContent = '';
+      }).catch(function(){ $('#msg',root).textContent = 'The QR library could not load. Check your connection.'; });
+    }
+    $('#go',root).addEventListener('click', make);
+    $('#dl',root).addEventListener('click', function(){
+      var c = box.querySelector('canvas'), i = box.querySelector('img');
+      if(c) download(c.toDataURL('image/png'), 'qr-code.png');
+      else if(i && i.src) download(i.src, 'qr-code.png');
+      else $('#msg',root).textContent = 'Create the QR code first.';
+    });
+    make();
+  }
+});
+
+/* ---------------------------------------------------------------- 
+   MONEY & CALCULATORS
+   ---------------------------------------------------------------- */
+TOOLS.push({
+  id:'emi-calculator', name:'EMI Calculator', cat:'Money', glyph:'₹',
+  blurb:'Work out the monthly instalment on a home, car or personal loan, plus total interest.',
+  tags:'loan emi home car personal interest instalment amortisation india',
+  ui:function(){ return `
+    <div class="panel">
+      <div class="row">
+        <label class="f"><span>Loan amount (₹)</span><input type="number" id="p" value="2500000"></label>
+        <label class="f"><span>Interest rate (% p.a.)</span><input type="number" id="r" value="8.5" step="0.05"></label>
+        <label class="f"><span>Tenure (years)</span><input type="number" id="y" value="20"></label>
+      </div>
+      <div style="margin-top:20px"><div class="big" id="emi">—</div>
+      <p class="hint">Monthly instalment</p></div>
+      <div class="stats" style="margin-top:14px">
+        <div class="stat"><b id="tp">—</b><span>Principal</span></div>
+        <div class="stat"><b id="ti">—</b><span>Total interest</span></div>
+        <div class="stat"><b id="tt">—</b><span>Total payable</span></div>
+        <div class="stat"><b id="pc">—</b><span>Interest share</span></div>
+      </div>
+    </div>
+    <div class="panel"><h3 style="margin:0 0 12px;font-family:'Bricolage Grotesque',sans-serif">Year by year</h3>
+      <div style="overflow:auto"><table class="tb" id="am"></table></div>
+    </div>`;
+  },
+  init:function(root){
+    function calc(){
+      var P = +$('#p',root).value, R = +$('#r',root).value/1200, N = +$('#y',root).value*12;
+      if(!(P>0 && N>0)) return;
+      var emi = R > 0 ? P*R*Math.pow(1+R,N)/(Math.pow(1+R,N)-1) : P/N;
+      var total = emi*N, interest = total-P;
+      $('#emi',root).textContent = inr(emi);
+      $('#tp',root).textContent = inr(P);
+      $('#ti',root).textContent = inr(interest);
+      $('#tt',root).textContent = inr(total);
+      $('#pc',root).textContent = Math.round(interest/total*100) + '%';
+      var bal = P, rows = '<tr><th>Year</th><th>Principal paid</th><th>Interest paid</th><th>Balance</th></tr>';
+      for(var yy=1; yy<=+$('#y',root).value; yy++){
+        var pp=0, ii=0;
+        for(var m=0;m<12 && bal>0;m++){
+          var i = bal*R, pr = emi-i;
+          if(pr>bal) pr = bal;
+          bal -= pr; pp += pr; ii += i;
+        }
+        rows += '<tr><td>'+yy+'</td><td>'+inr(pp)+'</td><td>'+inr(ii)+'</td><td>'+inr(Math.max(0,bal))+'</td></tr>';
+      }
+      $('#am',root).innerHTML = rows;
+    }
+    ['#p','#r','#y'].forEach(function(s){ $(s,root).addEventListener('input', calc); });
+    calc();
+  }
+});
+
+TOOLS.push({
+  id:'sip-calculator', name:'SIP Calculator', cat:'Money', glyph:'↗',
+  blurb:'See what a monthly investment could grow to, and how much of that is returns.',
+  tags:'sip mutual fund investment returns compounding monthly india',
+  ui:function(){ return `
+    <div class="panel">
+      <div class="row">
+        <label class="f"><span>Monthly amount (₹)</span><input type="number" id="a" value="10000"></label>
+        <label class="f"><span>Expected return (% p.a.)</span><input type="number" id="r" value="12" step="0.5"></label>
+        <label class="f"><span>Years</span><input type="number" id="y" value="10"></label>
+      </div>
+      <div style="margin-top:20px"><div class="big" id="fv">—</div>
+      <p class="hint">Estimated value at the end</p></div>
+      <div class="stats" style="margin-top:14px">
+        <div class="stat"><b id="inv">—</b><span>You invest</span></div>
+        <div class="stat"><b id="gn">—</b><span>Estimated gain</span></div>
+        <div class="stat"><b id="mx">—</b><span>Multiple</span></div>
+      </div>
+      <p class="hint">A projection, not a promise — actual returns vary and can be negative.</p>
+    </div>`;
+  },
+  init:function(root){
+    function calc(){
+      var A = +$('#a',root).value, i = +$('#r',root).value/1200, n = +$('#y',root).value*12;
+      if(!(A>0 && n>0)) return;
+      var fv = i > 0 ? A*((Math.pow(1+i,n)-1)/i)*(1+i) : A*n;
+      var inv = A*n;
+      $('#fv',root).textContent = inr(fv);
+      $('#inv',root).textContent = inr(inv);
+      $('#gn',root).textContent = inr(fv-inv);
+      $('#mx',root).textContent = (fv/inv).toFixed(2) + '×';
+    }
+    ['#a','#r','#y'].forEach(function(s){ $(s,root).addEventListener('input', calc); });
+    calc();
+  }
+});
+
+TOOLS.push({
+  id:'gst-calculator', name:'GST Calculator', cat:'Money', glyph:'%',
+  blurb:'Add or remove GST at any slab, split into CGST and SGST.',
+  tags:'gst tax cgst sgst igst india invoice inclusive exclusive',
+  ui:function(){ return `
+    <div class="panel">
+      <div class="row">
+        <label class="f"><span>Amount (₹)</span><input type="number" id="a" value="10000"></label>
+        <label class="f"><span>GST rate</span><select id="r"><option>5</option><option>12</option><option selected>18</option><option>28</option></select></label>
+        <label class="f"><span>The amount is</span><select id="m">
+          <option value="ex">Before GST (add it)</option><option value="in">After GST (remove it)</option>
+        </select></label>
+      </div>
+      <div class="stats" style="margin-top:18px">
+        <div class="stat"><b id="base">—</b><span>Taxable value</span></div>
+        <div class="stat"><b id="tax">—</b><span>Total GST</span></div>
+        <div class="stat"><b id="tot">—</b><span>Invoice total</span></div>
+      </div>
+      <div class="stats" style="margin-top:10px">
+        <div class="stat"><b id="c">—</b><span>CGST</span></div>
+        <div class="stat"><b id="s">—</b><span>SGST</span></div>
+        <div class="stat"><b id="i">—</b><span>IGST (inter-state)</span></div>
+      </div>
+    </div>`;
+  },
+  init:function(root){
+    function calc(){
+      var a = +$('#a',root).value || 0, r = +$('#r',root).value, mode = $('#m',root).value;
+      var base = mode === 'ex' ? a : a/(1+r/100);
+      var tax = base*r/100;
+      $('#base',root).textContent = inr(base);
+      $('#tax',root).textContent = inr(tax);
+      $('#tot',root).textContent = inr(base+tax);
+      $('#c',root).textContent = inr(tax/2);
+      $('#s',root).textContent = inr(tax/2);
+      $('#i',root).textContent = inr(tax);
+    }
+    ['#a','#r','#m'].forEach(function(s){ $(s,root).addEventListener('input', calc); });
+    calc();
+  }
+});
+
+TOOLS.push({
+  id:'percentage-calculator', name:'Percentage Calculator', cat:'Money', glyph:'⅟',
+  blurb:'The three percentage questions people actually ask, answered side by side.',
+  tags:'percent percentage increase decrease change discount of',
+  ui:function(){ return `
+    <div class="panel">
+      <div class="row" style="align-items:end">
+        <label class="f"><span>What is</span><input type="number" id="a1" value="15"></label>
+        <label class="f"><span>% of</span><input type="number" id="a2" value="2400"></label>
+        <div><div class="big" id="r1">—</div></div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="row" style="align-items:end">
+        <label class="f"><span>Number</span><input type="number" id="b1" value="45"></label>
+        <label class="f"><span>is what % of</span><input type="number" id="b2" value="180"></label>
+        <div><div class="big" id="r2">—</div></div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="row" style="align-items:end">
+        <label class="f"><span>From</span><input type="number" id="c1" value="50000"></label>
+        <label class="f"><span>To</span><input type="number" id="c2" value="62500"></label>
+        <div><div class="big" id="r3">—</div><p class="hint">Change</p></div>
+      </div>
+    </div>`;
+  },
+  init:function(root){
+    function calc(){
+      $('#r1',root).textContent = num(+$('#a1',root).value * +$('#a2',root).value / 100);
+      var d = +$('#b2',root).value;
+      $('#r2',root).textContent = d ? num(+$('#b1',root).value / d * 100) + '%' : '—';
+      var f = +$('#c1',root).value, t = +$('#c2',root).value;
+      $('#r3',root).textContent = f ? (t>=f?'+':'') + num((t-f)/f*100) + '%' : '—';
+    }
+    $$('input', root).forEach(function(i){ i.addEventListener('input', calc); });
+    calc();
+  }
+});
+
+TOOLS.push({
+  id:'age-calculator', name:'Age Calculator', cat:'Money', glyph:'◷',
+  blurb:'Exact age in years, months and days — plus the gap between any two dates.',
+  tags:'age date birthday difference days between years old',
+  ui:function(){ return `
+    <div class="panel">
+      <div class="row">
+        <label class="f"><span>From (date of birth)</span><input type="date" id="a"></label>
+        <label class="f"><span>To</span><input type="date" id="b"></label>
+      </div>
+      <div style="margin-top:20px"><div class="big" id="main">—</div></div>
+      <div class="stats" style="margin-top:14px">
+        <div class="stat"><b id="d1">—</b><span>Total days</span></div>
+        <div class="stat"><b id="d2">—</b><span>Total weeks</span></div>
+        <div class="stat"><b id="d3">—</b><span>Total months</span></div>
+        <div class="stat"><b id="d4">—</b><span>Next birthday in</span></div>
+      </div>
+    </div>`;
+  },
+  init:function(root){
+    var a = $('#a',root), b = $('#b',root);
+    b.value = new Date().toISOString().slice(0,10);
+    a.value = '1995-01-01';
+    function calc(){
+      var d1 = new Date(a.value), d2 = new Date(b.value);
+      if(isNaN(d1) || isNaN(d2) || d2 < d1){ $('#main',root).textContent = '—'; return; }
+      var y = d2.getFullYear()-d1.getFullYear(), m = d2.getMonth()-d1.getMonth(), d = d2.getDate()-d1.getDate();
+      if(d < 0){ m--; d += new Date(d2.getFullYear(), d2.getMonth(), 0).getDate(); }
+      if(m < 0){ y--; m += 12; }
+      $('#main',root).textContent = y + ' years, ' + m + ' months, ' + d + ' days';
+      var days = Math.floor((d2-d1)/86400000);
+      $('#d1',root).textContent = days.toLocaleString('en-IN');
+      $('#d2',root).textContent = Math.floor(days/7).toLocaleString('en-IN');
+      $('#d3',root).textContent = (y*12+m).toLocaleString('en-IN');
+      var nb = new Date(d2.getFullYear(), d1.getMonth(), d1.getDate());
+      if(nb < d2) nb.setFullYear(nb.getFullYear()+1);
+      $('#d4',root).textContent = Math.ceil((nb-d2)/86400000) + ' days';
+    }
+    a.addEventListener('input', calc); b.addEventListener('input', calc);
+    calc();
+  }
+});
+
+TOOLS.push({
+  id:'unit-converter', name:'Unit Converter', cat:'Money', glyph:'⇋',
+  blurb:'Length, weight, temperature, area and data — converted as you type.',
+  tags:'convert units length weight metric imperial temperature km miles kg lbs',
+  ui:function(){ return `
+    <div class="panel">
+      <label class="f"><span>Category</span><select id="cat"></select></label>
+      <div class="row" style="margin-top:14px">
+        <label class="f"><span>From</span><input type="number" id="v1" value="1"><select id="u1" style="margin-top:8px"></select></label>
+        <label class="f"><span>To</span><input type="number" id="v2" readonly><select id="u2" style="margin-top:8px"></select></label>
+      </div>
+      <p class="hint" id="line"></p>
+    </div>`;
+  },
+  init:function(root){
+    var SETS = {
+      Length: {Millimetre:.001, Centimetre:.01, Metre:1, Kilometre:1000, Inch:.0254, Foot:.3048, Yard:.9144, Mile:1609.344, 'Nautical mile':1852},
+      Weight: {Milligram:.000001, Gram:.001, Kilogram:1, Tonne:1000, Ounce:.0283495, Pound:.453592, Tola:.0116638},
+      Area:   {'Square metre':1, 'Square foot':.092903, 'Square yard':.836127, Acre:4046.86, Hectare:10000, Guntha:101.17, Bigha:2529.29},
+      Volume: {Millilitre:.001, Litre:1, 'Cubic metre':1000, 'US gallon':3.78541, 'UK gallon':4.54609, 'Fluid ounce':.0295735},
+      Data:   {Byte:1, Kilobyte:1024, Megabyte:1048576, Gigabyte:1073741824, Terabyte:1099511627776},
+      Temperature: null
+    };
+    var cat = $('#cat',root), u1 = $('#u1',root), u2 = $('#u2',root), v1 = $('#v1',root), v2 = $('#v2',root);
+    cat.innerHTML = Object.keys(SETS).map(function(k){ return '<option>'+k+'</option>'; }).join('');
+    function fillUnits(){
+      var opts;
+      if(cat.value === 'Temperature') opts = ['Celsius','Fahrenheit','Kelvin'];
+      else opts = Object.keys(SETS[cat.value]);
+      var html = opts.map(function(o){ return '<option>'+o+'</option>'; }).join('');
+      u1.innerHTML = html; u2.innerHTML = html;
+      u2.selectedIndex = Math.min(1, opts.length-1);
+      calc();
+    }
+    function calc(){
+      var x = parseFloat(v1.value); if(isNaN(x)){ v2.value = ''; return; }
+      var out;
+      if(cat.value === 'Temperature'){
+        var c = u1.value==='Celsius' ? x : u1.value==='Fahrenheit' ? (x-32)*5/9 : x-273.15;
+        out = u2.value==='Celsius' ? c : u2.value==='Fahrenheit' ? c*9/5+32 : c+273.15;
+      } else {
+        var S = SETS[cat.value];
+        out = x * S[u1.value] / S[u2.value];
+      }
+      v2.value = Math.round(out*1e6)/1e6;
+      $('#line',root).textContent = x + ' ' + u1.value + ' = ' + v2.value + ' ' + u2.value;
+    }
+    cat.addEventListener('change', fillUnits);
+    [v1,u1,u2].forEach(function(el){ el.addEventListener('input', calc); el.addEventListener('change', calc); });
+    fillUnits();
+  }
+});
+
+/* ==================================================================
+   PDF TOOLKIT
+   Two libraries, lazy-loaded only when a PDF tool is opened:
+     pdf-lib  — writes/edits PDFs (merge, split, watermark, reorder)
+     pdf.js   — reads PDFs (render pages, pull text, pull images)
+   ================================================================== */
+var CDN_PDFLIB = 'https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js';
+var CDN_PDFJS  = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+var CDN_JSPDF  = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+
+function pdflib(){ return need(CDN_PDFLIB).then(function(){ return window.PDFLib; }); }
+function pdfjs(){
+  return need(CDN_PDFJS).then(function(){
+    var L = window.pdfjsLib;
+    L.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    return L;
+  });
+}
+function savePdf(bytes, name){
+  var url = URL.createObjectURL(new Blob([bytes], {type:'application/pdf'}));
+  download(url, name);
+  setTimeout(function(){ URL.revokeObjectURL(url); }, 5000);
+}
+/* "1-3, 7, 12-" -> [0,1,2,6,11,...] (zero-based, clamped, de-duped, ordered) */
+function parseRanges(spec, total){
+  var out = [], seen = {};
+  spec.split(',').forEach(function(part){
+    part = part.trim(); if(!part) return;
+    var m = part.match(/^(\d*)\s*-\s*(\d*)$/);
+    var a, b;
+    if(m){ a = m[1] ? +m[1] : 1; b = m[2] ? +m[2] : total; }
+    else if(/^\d+$/.test(part)){ a = b = +part; }
+    else return;
+    if(a > b){ var t = a; a = b; b = t; }
+    for(var i = Math.max(1,a); i <= Math.min(total,b); i++){
+      if(!seen[i]){ seen[i] = 1; out.push(i-1); }
+    }
+  });
+  return out;
+}
+/* a reusable "pick PDF files" block */
+function pdfDrop(label){
+  return '<div class="drop" id="dz"><b>' + label + '</b><span>or press to browse — nothing is uploaded</span></div>';
+}
+function pdfError(root, err){
+  console.error(err);
+  var m = $('#msg', root); if(!m) return;
+  m.className = 'err';
+  m.textContent = /password|encrypt/i.test(String(err && err.message))
+    ? 'That PDF is password-protected. Remove the password in your PDF reader first.'
+    : 'That file could not be read. It may be damaged or not a real PDF.';
+}
+
+/* ---------------------------------------------------------------- */
+TOOLS.push({
+  id:'pdf-merger', name:'PDF Merger', cat:'PDF', glyph:'⧉', isNew:true,
+  blurb:'Combine several PDFs into one document, in the order you choose.',
+  tags:'merge combine join append multiple pdf into one',
+  ui:function(){ return `
+    <div class="panel">` + pdfDrop('Drop PDF files here') + `
+      <div class="thumbs" id="list"></div>
+    </div>
+    <div class="panel" id="opts" hidden>
+      <label class="f"><span>File name</span><input type="text" id="fn" value="merged"></label>
+      <div class="btns"><button class="btn" id="go">Merge PDFs</button><button class="btn alt" id="clr">Remove all</button></div>
+      <p class="hint" id="msg"></p>
+    </div>`;
+  },
+  init:function(root){
+    var files = [];
+    function paint(){
+      $('#list',root).innerHTML = files.map(function(f,i){ return `
+        <div class="th"><span class="ix">${String(i+1).padStart(2,'0')}</span>
+          <div class="im" style="height:56px;font-size:22px">▤</div>
+          <div class="nm">${esc(f.name)}</div>
+          <div class="nm">${f.pages ? f.pages + ' pages' : kb(f.size)}</div>
+          <div class="bar2"><button data-a="l" data-i="${i}">‹</button><button data-a="x" data-i="${i}">✕</button><button data-a="r" data-i="${i}">›</button></div>
+        </div>`; }).join('');
+      $('#opts',root).hidden = !files.length;
+    }
+    $('#list',root).addEventListener('click', function(e){
+      var b = e.target.closest('button'); if(!b) return;
+      var i = +b.dataset.i;
+      if(b.dataset.a === 'x') files.splice(i,1);
+      if(b.dataset.a === 'l' && i > 0) files.splice(i-1,0,files.splice(i,1)[0]);
+      if(b.dataset.a === 'r' && i < files.length-1) files.splice(i+1,0,files.splice(i,1)[0]);
+      paint();
+    });
+    dropzone($('#dz',root), 'application/pdf', function(fl){
+      Array.prototype.slice.call(fl).filter(function(f){ return /pdf$/i.test(f.name); }).forEach(function(f){
+        files.push(f); paint();
+        pdflib().then(function(P){ return f.arrayBuffer().then(function(b){ return P.PDFDocument.load(b, {ignoreEncryption:true}); }); })
+          .then(function(d){ f.pages = d.getPageCount(); paint(); })
+          .catch(function(){});
+      });
+    });
+    $('#clr',root).addEventListener('click', function(){ files = []; paint(); });
+    $('#go',root).addEventListener('click', function(){
+      var btn = this, msg = $('#msg',root);
+      btn.disabled = true; msg.className = 'hint'; msg.textContent = 'Merging…';
+      pdflib().then(async function(P){
+        var out = await P.PDFDocument.create();
+        for(var i=0;i<files.length;i++){
+          var src = await P.PDFDocument.load(await files[i].arrayBuffer(), {ignoreEncryption:true});
+          var pages = await out.copyPages(src, src.getPageIndices());
+          pages.forEach(function(p){ out.addPage(p); });
+        }
+        var bytes = await out.save();
+        savePdf(bytes, ($('#fn',root).value || 'merged') + '.pdf');
+        msg.textContent = 'Merged ' + files.length + ' files into ' + out.getPageCount() + ' pages.';
+      }).catch(function(e){ pdfError(root, e); }).then(function(){ btn.disabled = false; });
+    });
+    paint();
+  }
+});
+
+/* ---------------------------------------------------------------- */
+TOOLS.push({
+  id:'pdf-splitter', name:'PDF Splitter', cat:'PDF', glyph:'✂', isNew:true,
+  blurb:'Pull out a page range, or break a PDF into one file per page.',
+  tags:'split extract pages range separate divide cut',
+  ui:function(){ return `
+    <div class="panel">` + pdfDrop('Drop a PDF here') + `
+      <p class="hint" id="info"></p>
+    </div>
+    <div class="panel" id="opts" hidden>
+      <div class="row">
+        <label class="f"><span>Mode</span><select id="mode">
+          <option value="range">Keep a page range</option>
+          <option value="each">One file per page</option>
+        </select></label>
+        <label class="f" id="rw"><span>Pages</span><input type="text" id="rg" value="1-3" placeholder="e.g. 1-3, 7, 10-"></label>
+      </div>
+      <div class="btns"><button class="btn" id="go">Split</button></div>
+      <p class="hint" id="msg"></p>
+    </div>`;
+  },
+  init:function(root){
+    var file = null, total = 0;
+    dropzone($('#dz',root), 'application/pdf', function(fl){
+      if(!fl[0]) return;
+      file = fl[0];
+      pdflib().then(function(P){ return file.arrayBuffer().then(function(b){ return P.PDFDocument.load(b, {ignoreEncryption:true}); }); })
+        .then(function(d){
+          total = d.getPageCount();
+          $('#info',root).textContent = file.name + ' — ' + total + ' pages';
+          $('#rg',root).value = '1-' + Math.min(3,total);
+          $('#opts',root).hidden = false;
+        }).catch(function(e){ pdfError(root, e); });
+    });
+    $('#mode',root).addEventListener('change', function(){ $('#rw',root).style.display = this.value === 'each' ? 'none' : ''; });
+    $('#go',root).addEventListener('click', function(){
+      var btn = this, msg = $('#msg',root), mode = $('#mode',root).value;
+      btn.disabled = true; msg.className = 'hint'; msg.textContent = 'Working…';
+      var base = file.name.replace(/\.pdf$/i,'');
+      pdflib().then(async function(P){
+        var src = await P.PDFDocument.load(await file.arrayBuffer(), {ignoreEncryption:true});
+        if(mode === 'each'){
+          for(var i=0;i<total;i++){
+            var one = await P.PDFDocument.create();
+            var cp = await one.copyPages(src, [i]);
+            one.addPage(cp[0]);
+            savePdf(await one.save(), base + '-page-' + (i+1) + '.pdf');
+            await new Promise(function(r){ setTimeout(r, 220); });
+          }
+          msg.textContent = 'Saved ' + total + ' files.';
+        } else {
+          var idx = parseRanges($('#rg',root).value, total);
+          if(!idx.length){ msg.className = 'err'; msg.textContent = 'That page range is empty. Try something like 1-3, 7.'; return; }
+          var out = await P.PDFDocument.create();
+          var pages = await out.copyPages(src, idx);
+          pages.forEach(function(p){ out.addPage(p); });
+          savePdf(await out.save(), base + '-pages.pdf');
+          msg.textContent = 'Saved ' + idx.length + ' pages.';
+        }
+      }).catch(function(e){ pdfError(root, e); }).then(function(){ btn.disabled = false; });
+    });
+  }
+});
+
+/* ---------------------------------------------------------------- */
+TOOLS.push({
+  id:'pdf-watermark-text', name:'Add Text Watermark to PDF', cat:'PDF', glyph:'✎', isNew:true,
+  blurb:'Stamp DRAFT, CONFIDENTIAL or any wording across every page.',
+  tags:'watermark text draft confidential stamp overlay label',
+  ui:function(){ return `
+    <div class="panel">` + pdfDrop('Drop a PDF here') + `
+      <p class="hint" id="info"></p>
+    </div>
+    <div class="panel" id="opts" hidden>
+      <div class="row">
+        <label class="f"><span>Text</span><input type="text" id="tx" value="CONFIDENTIAL"></label>
+        <label class="f"><span>Placement</span><select id="pos">
+          <option value="diag">Diagonal, centred</option>
+          <option value="center">Flat, centred</option>
+          <option value="tile">Tiled across page</option>
+          <option value="footer">Footer</option>
+        </select></label>
+        <label class="f"><span>Colour</span><select id="col">
+          <option value="0.6,0.6,0.6">Grey</option><option value="0.85,0.1,0.1">Red</option>
+          <option value="0.1,0.3,0.8">Blue</option><option value="0,0,0">Black</option>
+        </select></label>
+      </div>
+      <div class="row" style="margin-top:13px">
+        <label class="f"><span>Size — <span id="sv">48</span>pt</span><input type="range" id="sz" min="8" max="140" value="48"></label>
+        <label class="f"><span>Opacity — <span id="ov">18</span>%</span><input type="range" id="op" min="5" max="100" value="18"></label>
+      </div>
+      <div class="btns"><button class="btn" id="go">Add watermark</button></div>
+      <p class="hint" id="msg"></p>
+    </div>`;
+  },
+  init:function(root){
+    var file = null;
+    dropzone($('#dz',root), 'application/pdf', function(fl){
+      if(!fl[0]) return; file = fl[0];
+      $('#info',root).textContent = file.name;
+      $('#opts',root).hidden = false;
+    });
+    $('#sz',root).addEventListener('input', function(){ $('#sv',root).textContent = this.value; });
+    $('#op',root).addEventListener('input', function(){ $('#ov',root).textContent = this.value; });
+    $('#go',root).addEventListener('click', function(){
+      var btn = this, msg = $('#msg',root);
+      btn.disabled = true; msg.className = 'hint'; msg.textContent = 'Stamping…';
+      pdflib().then(async function(P){
+        var doc = await P.PDFDocument.load(await file.arrayBuffer(), {ignoreEncryption:true});
+        var font = await doc.embedFont(P.StandardFonts.HelveticaBold);
+        var text = $('#tx',root).value || 'CONFIDENTIAL';
+        var size = +$('#sz',root).value, op = +$('#op',root).value/100;
+        var c = $('#col',root).value.split(',').map(Number);
+        var color = P.rgb(c[0], c[1], c[2]);
+        var pos = $('#pos',root).value;
+        doc.getPages().forEach(function(page){
+          var w = page.getWidth(), h = page.getHeight();
+          var tw = font.widthOfTextAtSize(text, size);
+          if(pos === 'tile'){
+            var s = Math.max(14, size*0.5), sw = font.widthOfTextAtSize(text, s);
+            for(var y = 40; y < h; y += s*4){
+              for(var x = -sw; x < w; x += sw + s*2.2){
+                page.drawText(text, {x:x, y:y, size:s, font:font, color:color, opacity:op, rotate:P.degrees(30)});
+              }
+            }
+          } else if(pos === 'footer'){
+            page.drawText(text, {x:(w - font.widthOfTextAtSize(text, Math.min(size,18)))/2, y:22,
+              size:Math.min(size,18), font:font, color:color, opacity:Math.min(1, op*2.5)});
+          } else if(pos === 'center'){
+            page.drawText(text, {x:(w-tw)/2, y:h/2 - size/2, size:size, font:font, color:color, opacity:op});
+          } else {
+            var ang = Math.atan2(h, w);
+            var dx = (w - tw*Math.cos(ang))/2, dy = (h - tw*Math.sin(ang))/2;
+            page.drawText(text, {x:dx, y:dy, size:size, font:font, color:color, opacity:op, rotate:P.radians(ang)});
+          }
+        });
+        savePdf(await doc.save(), file.name.replace(/\.pdf$/i,'') + '-watermarked.pdf');
+        msg.textContent = 'Stamped ' + doc.getPageCount() + ' pages.';
+      }).catch(function(e){ pdfError(root, e); }).then(function(){ btn.disabled = false; });
+    });
+  }
+});
+
+/* ---------------------------------------------------------------- */
+TOOLS.push({
+  id:'pdf-watermark-image', name:'Add Image Watermark to PDF', cat:'PDF', glyph:'❖', isNew:true,
+  blurb:'Overlay a logo or signature image onto every page of a PDF.',
+  tags:'watermark logo image stamp signature brand overlay png',
+  ui:function(){ return `
+    <div class="panel">
+      <div class="drop" id="dz"><b>Drop a PDF here</b><span>the document to stamp</span></div>
+      <p class="hint" id="info"></p>
+    </div>
+    <div class="panel">
+      <div class="drop" id="dz2"><b>Drop the logo here</b><span>PNG or JPG</span></div>
+      <p class="hint" id="info2"></p>
+    </div>
+    <div class="panel" id="opts" hidden>
+      <div class="row">
+        <label class="f"><span>Position</span><select id="pos">
+          <option value="c">Centre</option><option value="br">Bottom right</option>
+          <option value="bl">Bottom left</option><option value="tr">Top right</option><option value="tl">Top left</option>
+        </select></label>
+        <label class="f"><span>Width — <span id="wv">30</span>% of page</span><input type="range" id="wd" min="5" max="100" value="30"></label>
+        <label class="f"><span>Opacity — <span id="ov">25</span>%</span><input type="range" id="op" min="5" max="100" value="25"></label>
+      </div>
+      <div class="btns"><button class="btn" id="go">Add watermark</button></div>
+      <p class="hint" id="msg"></p>
+    </div>`;
+  },
+  init:function(root){
+    var pdf = null, img = null;
+    function ready(){ if(pdf && img) $('#opts',root).hidden = false; }
+    dropzone($('#dz',root), 'application/pdf', function(fl){
+      if(!fl[0]) return; pdf = fl[0]; $('#info',root).textContent = pdf.name; ready();
+    });
+    dropzone($('#dz2',root), 'image/png,image/jpeg', function(fl){
+      if(!fl[0]) return; img = fl[0]; $('#info2',root).textContent = img.name; ready();
+    });
+    $('#wd',root).addEventListener('input', function(){ $('#wv',root).textContent = this.value; });
+    $('#op',root).addEventListener('input', function(){ $('#ov',root).textContent = this.value; });
+    $('#go',root).addEventListener('click', function(){
+      var btn = this, msg = $('#msg',root);
+      btn.disabled = true; msg.className = 'hint'; msg.textContent = 'Stamping…';
+      pdflib().then(async function(P){
+        var doc = await P.PDFDocument.load(await pdf.arrayBuffer(), {ignoreEncryption:true});
+        var bytes = await img.arrayBuffer();
+        var emb = /png$/i.test(img.name) ? await doc.embedPng(bytes) : await doc.embedJpg(bytes);
+        var pct = +$('#wd',root).value/100, op = +$('#op',root).value/100, pos = $('#pos',root).value;
+        doc.getPages().forEach(function(page){
+          var w = page.getWidth(), h = page.getHeight();
+          var dw = w*pct, dh = dw * (emb.height/emb.width);
+          var m = 24, x, y;
+          if(pos === 'c'){ x = (w-dw)/2; y = (h-dh)/2; }
+          else { x = /r$/.test(pos) ? w-dw-m : m; y = /^b/.test(pos) ? m : h-dh-m; }
+          page.drawImage(emb, {x:x, y:y, width:dw, height:dh, opacity:op});
+        });
+        savePdf(await doc.save(), pdf.name.replace(/\.pdf$/i,'') + '-watermarked.pdf');
+        msg.textContent = 'Stamped ' + doc.getPageCount() + ' pages.';
+      }).catch(function(e){ pdfError(root, e); }).then(function(){ btn.disabled = false; });
+    });
+  }
+});
+
+/* ---------------------------------------------------------------- */
+TOOLS.push({
+  id:'pdf-page-editor', name:'PDF Page Editor', cat:'PDF', glyph:'▥', isNew:true,
+  blurb:'Reorder, rotate and delete pages visually, then save the result.',
+  tags:'edit pages reorder rotate delete remove organise rearrange',
+  ui:function(){ return `
+    <div class="panel">` + pdfDrop('Drop a PDF here') + `
+      <p class="hint" id="info"></p>
+      <div class="thumbs" id="pv"></div>
+    </div>
+    <div class="panel" id="opts" hidden>
+      <div class="btns"><button class="btn" id="go">Save PDF</button><button class="btn alt" id="reset">Undo all changes</button></div>
+      <p class="hint" id="msg"></p>
+    </div>`;
+  },
+  init:function(root){
+    var file = null, pages = [], shots = {};
+    function paint(){
+      $('#pv',root).innerHTML = pages.map(function(p,i){ return `
+        <div class="th"><span class="ix">${i+1}</span>
+          <div class="im">${shots[p.src] ? `<img src="${shots[p.src]}" style="transform:rotate(${p.rot}deg)" alt="">` : '<span style="font-size:20px">▤</span>'}</div>
+          <div class="nm">page ${p.src+1}${p.rot?' · '+p.rot+'°':''}</div>
+          <div class="bar2"><button data-a="l" data-i="${i}">‹</button><button data-a="r" data-i="${i}">⟳</button><button data-a="x" data-i="${i}">✕</button><button data-a="rr" data-i="${i}">›</button></div>
+        </div>`; }).join('');
+      $('#opts',root).hidden = !pages.length;
+    }
+    $('#pv',root).addEventListener('click', function(e){
+      var b = e.target.closest('button'); if(!b) return;
+      var i = +b.dataset.i, a = b.dataset.a;
+      if(a==='x') pages.splice(i,1);
+      if(a==='r') pages[i].rot = (pages[i].rot + 90) % 360;
+      if(a==='l' && i>0) pages.splice(i-1,0,pages.splice(i,1)[0]);
+      if(a==='rr' && i<pages.length-1) pages.splice(i+1,0,pages.splice(i,1)[0]);
+      paint();
+    });
+    function load(){
+      pdfjs().then(function(L){ return file.arrayBuffer().then(function(b){ return L.getDocument({data:b}).promise; }); })
+        .then(async function(doc){
+          pages = []; shots = {};
+          for(var i=0;i<doc.numPages;i++) pages.push({src:i, rot:0});
+          $('#info',root).textContent = file.name + ' — ' + doc.numPages + ' pages';
+          paint();
+          for(var n=1;n<=doc.numPages;n++){
+            var pg = await doc.getPage(n);
+            var vp = pg.getViewport({scale:1});
+            var s = 150/Math.max(vp.width, vp.height);
+            var v2 = pg.getViewport({scale:s});
+            var c = document.createElement('canvas');
+            c.width = v2.width; c.height = v2.height;
+            await pg.render({canvasContext:c.getContext('2d'), viewport:v2}).promise;
+            shots[n-1] = c.toDataURL('image/jpeg', .7);
+            paint();
+          }
+        }).catch(function(e){ pdfError(root, e); });
+    }
+    dropzone($('#dz',root), 'application/pdf', function(fl){ if(fl[0]){ file = fl[0]; load(); } });
+    $('#reset',root).addEventListener('click', load);
+    $('#go',root).addEventListener('click', function(){
+      var btn = this, msg = $('#msg',root);
+      btn.disabled = true; msg.className = 'hint'; msg.textContent = 'Saving…';
+      pdflib().then(async function(P){
+        var src = await P.PDFDocument.load(await file.arrayBuffer(), {ignoreEncryption:true});
+        var out = await P.PDFDocument.create();
+        var copied = await out.copyPages(src, pages.map(function(p){ return p.src; }));
+        copied.forEach(function(pg, i){
+          if(pages[i].rot) pg.setRotation(P.degrees((pg.getRotation().angle + pages[i].rot) % 360));
+          out.addPage(pg);
+        });
+        savePdf(await out.save(), file.name.replace(/\.pdf$/i,'') + '-edited.pdf');
+        msg.textContent = 'Saved ' + pages.length + ' pages.';
+      }).catch(function(e){ pdfError(root, e); }).then(function(){ btn.disabled = false; });
+    });
+  }
+});
+
+/* ---------------------------------------------------------------- */
+TOOLS.push({
+  id:'pdf-compressor', name:'PDF Compressor', cat:'PDF', glyph:'⊝', isNew:true,
+  blurb:'Shrink a heavy PDF by re-rendering its pages at a lower quality.',
+  tags:'compress reduce shrink size optimise smaller scan',
+  ui:function(){ return `
+    <div class="panel">` + pdfDrop('Drop a PDF here') + `
+      <p class="hint" id="info"></p>
+    </div>
+    <div class="panel" id="opts" hidden>
+      <div class="row">
+        <label class="f"><span>Quality — <span id="qv">60</span>%</span><input type="range" id="q" min="20" max="95" value="60"></label>
+        <label class="f"><span>Resolution</span><select id="dpi">
+          <option value="1">Screen (fast, smallest)</option>
+          <option value="1.5" selected>Balanced</option>
+          <option value="2">Print (largest)</option>
+        </select></label>
+      </div>
+      <p class="hint">Pages are re-rendered as images, so the result looks the same but the text is no longer selectable. Best for scans and image-heavy files.</p>
+      <div class="btns"><button class="btn" id="go">Compress</button></div>
+      <div class="stats" style="margin-top:14px" id="st" hidden>
+        <div class="stat"><b id="s1">–</b><span>Before</span></div>
+        <div class="stat"><b id="s2">–</b><span>After</span></div>
+        <div class="stat"><b id="s3">–</b><span>Saved</span></div>
+      </div>
+      <p class="hint" id="msg"></p>
+    </div>`;
+  },
+  init:function(root){
+    var file = null;
+    dropzone($('#dz',root), 'application/pdf', function(fl){
+      if(!fl[0]) return; file = fl[0];
+      $('#info',root).textContent = file.name + ' — ' + kb(file.size);
+      $('#opts',root).hidden = false;
+    });
+    $('#q',root).addEventListener('input', function(){ $('#qv',root).textContent = this.value; });
+    $('#go',root).addEventListener('click', function(){
+      var btn = this, msg = $('#msg',root);
+      btn.disabled = true; msg.className = 'hint'; msg.textContent = 'Rendering pages…';
+      Promise.all([pdfjs(), need(CDN_JSPDF)]).then(async function(r){
+        var L = r[0];
+        var doc = await L.getDocument({data: await file.arrayBuffer()}).promise;
+        var q = +$('#q',root).value/100, scale = +$('#dpi',root).value, out = null;
+        for(var n=1;n<=doc.numPages;n++){
+          msg.textContent = 'Rendering page ' + n + ' of ' + doc.numPages + '…';
+          var pg = await doc.getPage(n);
+          var vp = pg.getViewport({scale:scale});
+          var c = document.createElement('canvas');
+          c.width = vp.width; c.height = vp.height;
+          var cx = c.getContext('2d');
+          cx.fillStyle = '#fff'; cx.fillRect(0,0,c.width,c.height);
+          await pg.render({canvasContext:cx, viewport:vp}).promise;
+          var img = c.toDataURL('image/jpeg', q);
+          var base = pg.getViewport({scale:1});
+          var o = base.width > base.height ? 'landscape' : 'portrait';
+          if(!out) out = new window.jspdf.jsPDF({unit:'pt', orientation:o, format:[base.width, base.height], compress:true});
+          else out.addPage([base.width, base.height], o);
+          out.addImage(img, 'JPEG', 0, 0, base.width, base.height, undefined, 'FAST');
+        }
+        var blob = out.output('blob');
+        $('#st',root).hidden = false;
+        $('#s1',root).textContent = kb(file.size);
+        $('#s2',root).textContent = kb(blob.size);
+        $('#s3',root).textContent = Math.max(0, Math.round((1 - blob.size/file.size)*100)) + '%';
+        var url = URL.createObjectURL(blob);
+        download(url, file.name.replace(/\.pdf$/i,'') + '-compressed.pdf');
+        setTimeout(function(){ URL.revokeObjectURL(url); }, 5000);
+        msg.textContent = blob.size < file.size ? 'Done.' : 'This file was already well compressed — the result is not smaller. Try a lower quality.';
+      }).catch(function(e){ pdfError(root, e); }).then(function(){ btn.disabled = false; });
+    });
+  }
+});
+
+/* ---------------------------------------------------------------- */
+TOOLS.push({
+  id:'pdf-to-text', name:'PDF to TXT Converter', cat:'PDF', glyph:'⌶', isNew:true,
+  blurb:'Pull the text out of a PDF as clean plain text you can copy or save.',
+  tags:'extract text txt plain copy content read scrape',
+  ui:function(){ return `
+    <div class="panel">` + pdfDrop('Drop a PDF here') + `
+      <p class="hint" id="msg"></p>
+    </div>
+    <div class="panel" id="opts" hidden>
+      <div class="btns"><button class="btn" id="cp">Copy all</button><button class="btn alt" id="dl">Download .txt</button></div>
+      <div class="out" id="o" style="margin-top:14px"></div>
+    </div>`;
+  },
+  init:function(root){
+    var text = '', name = 'document';
+    dropzone($('#dz',root), 'application/pdf', function(fl){
+      if(!fl[0]) return;
+      var file = fl[0]; name = file.name.replace(/\.pdf$/i,'');
+      var msg = $('#msg',root); msg.className = 'hint'; msg.textContent = 'Reading…';
+      pdfjs().then(async function(L){
+        var doc = await L.getDocument({data: await file.arrayBuffer()}).promise;
+        var parts = [];
+        for(var n=1;n<=doc.numPages;n++){
+          var c = await (await doc.getPage(n)).getTextContent();
+          var last = null, line = [];
+          var out = [];
+          c.items.forEach(function(it){
+            var y = Math.round(it.transform[5]);
+            if(last !== null && Math.abs(y-last) > 2){ out.push(line.join('')); line = []; }
+            line.push(it.str); last = y;
+          });
+          if(line.length) out.push(line.join(''));
+          parts.push(out.join('\n').replace(/[ \t]{2,}/g,' ').trim());
+        }
+        text = parts.join('\n\n');
+        $('#o',root).textContent = text || '(No text found — this PDF is probably a scan. Use PDF to OCR instead.)';
+        $('#opts',root).hidden = false;
+        msg.textContent = doc.numPages + ' pages, ' + (text.match(/\S+/g)||[]).length + ' words.';
+      }).catch(function(e){ pdfError(root, e); });
+    });
+    $('#cp',root).addEventListener('click', function(){ copy(text, this); });
+    $('#dl',root).addEventListener('click', function(){
+      var url = URL.createObjectURL(new Blob([text], {type:'text/plain'}));
+      download(url, name + '.txt'); setTimeout(function(){ URL.revokeObjectURL(url); }, 4000);
+    });
+  }
+});
+
+/* ---------------------------------------------------------------- */
+TOOLS.push({
+  id:'pdf-to-markdown', name:'PDF to Markdown', cat:'PDF', glyph:'⌗', isNew:true,
+  blurb:'Turn a PDF into Markdown, guessing headings from the font sizes.',
+  tags:'markdown md convert notes obsidian ai llm structure',
+  ui:function(){ return `
+    <div class="panel">` + pdfDrop('Drop a PDF here') + `
+      <p class="hint" id="msg"></p>
+    </div>
+    <div class="panel" id="opts" hidden>
+      <div class="btns"><button class="btn" id="cp">Copy Markdown</button><button class="btn alt" id="dl">Download .md</button></div>
+      <div class="out" id="o" style="margin-top:14px"></div>
+      <p class="hint">Headings are inferred from font size, so check them — a PDF has no real heading structure to read.</p>
+    </div>`;
+  },
+  init:function(root){
+    var md = '', name = 'document';
+    dropzone($('#dz',root), 'application/pdf', function(fl){
+      if(!fl[0]) return;
+      var file = fl[0]; name = file.name.replace(/\.pdf$/i,'');
+      var msg = $('#msg',root); msg.className = 'hint'; msg.textContent = 'Reading…';
+      pdfjs().then(async function(L){
+        var doc = await L.getDocument({data: await file.arrayBuffer()}).promise;
+        var lines = [];
+        for(var n=1;n<=doc.numPages;n++){
+          var c = await (await doc.getPage(n)).getTextContent();
+          var lastY = null, buf = [], size = 0;
+          c.items.forEach(function(it){
+            var y = Math.round(it.transform[5]);
+            var h = Math.abs(it.transform[3]) || 10;
+            if(lastY !== null && Math.abs(y-lastY) > 2){
+              if(buf.join('').trim()) lines.push({t:buf.join('').trim(), s:size});
+              buf = []; size = 0;
+            }
+            buf.push(it.str); size = Math.max(size, h); lastY = y;
+          });
+          if(buf.join('').trim()) lines.push({t:buf.join('').trim(), s:size});
+        }
+        var sizes = lines.map(function(l){ return l.s; }).sort(function(a,b){ return a-b; });
+        var body = sizes.length ? sizes[Math.floor(sizes.length/2)] : 12;
+        md = lines.map(function(l){
+          var t = l.t;
+          if(/^[•▪●·\-\u2022]\s*/.test(t)) return '- ' + t.replace(/^[•▪●·\-\u2022]\s*/,'');
+          if(l.s >= body*1.6) return '# ' + t;
+          if(l.s >= body*1.3) return '## ' + t;
+          if(l.s >= body*1.12) return '### ' + t;
+          return t;
+        }).join('\n\n');
+        $('#o',root).textContent = md || '(No text found — this PDF is probably a scan.)';
+        $('#opts',root).hidden = false;
+        msg.textContent = doc.numPages + ' pages converted.';
+      }).catch(function(e){ pdfError(root, e); });
+    });
+    $('#cp',root).addEventListener('click', function(){ copy(md, this); });
+    $('#dl',root).addEventListener('click', function(){
+      var url = URL.createObjectURL(new Blob([md], {type:'text/markdown'}));
+      download(url, name + '.md'); setTimeout(function(){ URL.revokeObjectURL(url); }, 4000);
+    });
+  }
+});
+
+/* ---------------------------------------------------------------- */
+TOOLS.push({
+  id:'pdf-image-extractor', name:'PDF Image Extractor', cat:'PDF', glyph:'⊞', isNew:true,
+  blurb:'Pull every embedded image out of a PDF and save them as PNGs.',
+  tags:'extract images photos pull embedded png pictures',
+  ui:function(){ return `
+    <div class="panel">` + pdfDrop('Drop a PDF here') + `
+      <p class="hint" id="msg"></p>
+      <div class="thumbs" id="pv"></div>
+    </div>`;
+  },
+  init:function(root){
+    var found = [];
+    dropzone($('#dz',root), 'application/pdf', function(fl){
+      if(!fl[0]) return;
+      var file = fl[0], msg = $('#msg',root);
+      found = []; $('#pv',root).innerHTML = '';
+      msg.className = 'hint'; msg.textContent = 'Scanning…';
+      pdfjs().then(async function(L){
+        var doc = await L.getDocument({data: await file.arrayBuffer()}).promise;
+        for(var n=1;n<=doc.numPages;n++){
+          var page = await doc.getPage(n);
+          var ops = await page.getOperatorList();
+          for(var i=0;i<ops.fnArray.length;i++){
+            if(ops.fnArray[i] !== L.OPS.paintImageXObject && ops.fnArray[i] !== L.OPS.paintJpegXObject) continue;
+            var key = ops.argsArray[i][0];
+            try{
+              var im = await new Promise(function(res){ page.objs.get(key, res); });
+              if(!im || !im.width) continue;
+              var c = document.createElement('canvas');
+              c.width = im.width; c.height = im.height;
+              var cx = c.getContext('2d');
+              if(im.bitmap){ cx.drawImage(im.bitmap, 0, 0); }
+              else {
+                var d = cx.createImageData(im.width, im.height);
+                var src = im.data, dst = d.data;
+                if(src.length === im.width*im.height*3){
+                  for(var p=0,q=0;p<src.length;p+=3,q+=4){ dst[q]=src[p];dst[q+1]=src[p+1];dst[q+2]=src[p+2];dst[q+3]=255; }
+                } else { dst.set(src.subarray(0, dst.length)); }
+                cx.putImageData(d, 0, 0);
+              }
+              found.push({url:c.toDataURL('image/png'), w:im.width, h:im.height, page:n});
+            }catch(e){}
+          }
+          msg.textContent = 'Scanning page ' + n + ' of ' + doc.numPages + '… ' + found.length + ' found';
+        }
+        $('#pv',root).innerHTML = found.map(function(f,i){ return `
+          <div class="th"><span class="ix">p${f.page}</span>
+            <div class="im"><img src="${f.url}" alt=""></div>
+            <div class="nm">${f.w}×${f.h}</div>
+            <div class="bar2"><button data-i="${i}">Save PNG</button></div>
+          </div>`; }).join('');
+        msg.textContent = found.length ? found.length + ' images found.' : 'No embedded images found. Vector drawings and text are not images.';
+      }).catch(function(e){ pdfError(root, e); });
+    });
+    $('#pv',root).addEventListener('click', function(e){
+      var b = e.target.closest('button'); if(!b) return;
+      var f = found[+b.dataset.i];
+      download(f.url, 'image-p' + f.page + '-' + (+b.dataset.i+1) + '.png');
+    });
+  }
+});
+
+/* ---------------------------------------------------------------- */
+TOOLS.push({
+  id:'png-to-pdf', name:'PNG to PDF', cat:'PDF', glyph:'▣', isNew:true,
+  blurb:'Turn one or many PNG images into a single PDF, transparency flattened to white.',
+  tags:'png image to pdf convert single combine transparent',
+  ui:function(){ return TOOLS.filter(function(t){ return t.id === 'images-to-pdf'; })[0].ui(); },
+  init:function(root){ TOOLS.filter(function(t){ return t.id === 'images-to-pdf'; })[0].init(root); }
+});
+
+/* ==================================================================
+   TIER 2 — conversions that are genuinely useful but APPROXIMATE.
+   Every one of these states its limitation in the UI. A PDF stores
+   glyphs at coordinates, not documents: there are no real headings,
+   no table cells, no paragraphs. Everything below is inference.
+   Library URLs are jsDelivr npm paths, pinned to exact versions.
+   ================================================================== */
+var CDN_ZIP  = 'https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js';
+var CDN_XLSX = 'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js';
+var CDN_PPTX = 'https://cdn.jsdelivr.net/npm/pptxgenjs@4.0.1/dist/pptxgen.bundle.js';
+var CDN_TESS = 'https://cdn.jsdelivr.net/npm/tesseract.js@7.0.0/dist/tesseract.min.js';
+
+/* Pull positioned text out of a PDF: one array of lines per page.
+   Each line carries its font size and left edge, which is all the
+   structure we get to work with downstream. */
+function pdfLines(file){
+  return pdfjs().then(async function(L){
+    var doc = await L.getDocument({data: await file.arrayBuffer()}).promise;
+    var pages = [];
+    for(var n=1;n<=doc.numPages;n++){
+      var c = await (await doc.getPage(n)).getTextContent();
+      var lines = [], lastY = null, buf = [], size = 0, x0 = 1e9;
+      c.items.forEach(function(it){
+        if(!it.str) return;
+        var y = Math.round(it.transform[5]);
+        var h = Math.abs(it.transform[3]) || 10;
+        if(lastY !== null && Math.abs(y-lastY) > 2){
+          if(buf.join('').trim()) lines.push({t:buf.join('').trim(), s:size, x:x0, y:lastY, items:buf.slice()});
+          buf = []; size = 0; x0 = 1e9;
+        }
+        buf.push(it.str); size = Math.max(size, h); x0 = Math.min(x0, it.transform[4]); lastY = y;
+      });
+      if(buf.join('').trim()) lines.push({t:buf.join('').trim(), s:size, x:x0, y:lastY, items:buf.slice()});
+      pages.push(lines);
+    }
+    return {pages:pages, count:doc.numPages};
+  });
+}
+/* median font size = "body text" — headings are anything meaningfully bigger */
+function bodySize(pages){
+  var all = [];
+  pages.forEach(function(p){ p.forEach(function(l){ all.push(l.s); }); });
+  all.sort(function(a,b){ return a-b; });
+  return all.length ? all[Math.floor(all.length/2)] : 12;
+}
+function xmlEsc(s){
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+                  .replace(/"/g,'&quot;').replace(/'/g,'&apos;')
+                  .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g,'');
+}
+function saveBlob(data, mime, name){
+  var url = URL.createObjectURL(new Blob([data], {type:mime}));
+  download(url, name);
+  setTimeout(function(){ URL.revokeObjectURL(url); }, 6000);
+}
+/* honest banner reused by every Tier 2 tool */
+function caveat(text){
+  return '<p class="hint" style="border-left:2px solid var(--accent);padding-left:10px">' + text + '</p>';
+}
+/* lay out plain text blocks into a paginated PDF (used by .eml and EPUB) */
+function textToPdf(blocks, title){
+  return need(CDN_JSPDF).then(function(){
+    var doc = new window.jspdf.jsPDF({unit:'pt', format:'a4'});
+    var W = doc.internal.pageSize.getWidth(), H = doc.internal.pageSize.getHeight();
+    var m = 56, y = m, wrap = W - m*2;
+    blocks.forEach(function(b){
+      var size = b.s || 11, bold = !!b.b;
+      doc.setFont('helvetica', bold ? 'bold' : 'normal');
+      doc.setFontSize(size);
+      var lines = doc.splitTextToSize(b.t || ' ', wrap);
+      lines.forEach(function(ln){
+        if(y + size*1.45 > H - m){ doc.addPage(); y = m; }
+        doc.text(ln, m, y); y += size*1.45;
+      });
+      y += (b.gap === undefined ? 6 : b.gap);
+    });
+    if(title) doc.setProperties({title:title});
+    return doc;
+  });
+}
+
+/* ---------------------------------------------------------------- */
+TOOLS.push({
+  id:'pdf-to-word', name:'PDF to Word File Converter', cat:'PDF', glyph:'W', isNew:true,
+  blurb:'Extract a PDF into an editable Word document. Text and headings only.',
+  tags:'word docx convert editable document office msword',
+  ui:function(){ return `
+    <div class="panel">` + pdfDrop('Drop a PDF here') + `
+      <p class="hint" id="msg"></p>
+    </div>
+    <div class="panel" id="opts" hidden>
+      ` + caveat('This rebuilds your text as a clean Word document. Columns, tables, images and exact positioning are <b>not</b> preserved — a PDF does not store them as such. Headings are guessed from font size.') + `
+      <div class="btns"><button class="btn" id="go">Download .docx</button></div>
+      <div class="out" id="pv" style="margin-top:14px"></div>
+    </div>`;
+  },
+  init:function(root){
+    var data = null, name = 'document';
+    dropzone($('#dz',root), 'application/pdf', function(fl){
+      if(!fl[0]) return;
+      var file = fl[0]; name = file.name.replace(/\.pdf$/i,'');
+      var msg = $('#msg',root); msg.className = 'hint'; msg.textContent = 'Reading…';
+      pdfLines(file).then(function(r){
+        data = r;
+        var body = bodySize(r.pages), preview = [];
+        r.pages.forEach(function(p){ p.forEach(function(l){
+          preview.push((l.s >= body*1.6 ? 'H1  ' : l.s >= body*1.3 ? 'H2  ' : l.s >= body*1.12 ? 'H3  ' : '    ') + l.t);
+        }); });
+        $('#pv',root).textContent = preview.slice(0,60).join('\n') + (preview.length>60 ? '\n… ' + (preview.length-60) + ' more lines' : '');
+        $('#opts',root).hidden = false;
+        msg.textContent = r.count + ' pages, ' + preview.length + ' lines.';
+      }).catch(function(e){ pdfError(root, e); });
+    });
+    $('#go',root).addEventListener('click', function(){
+      var btn = this, msg = $('#msg',root);
+      btn.disabled = true; msg.className = 'hint'; msg.textContent = 'Building document…';
+      need(CDN_ZIP).then(async function(){
+        var body = bodySize(data.pages), paras = [];
+        data.pages.forEach(function(p, pi){
+          p.forEach(function(l){
+            var sz, bold;
+            if(l.s >= body*1.6){ sz = 32; bold = true; }
+            else if(l.s >= body*1.3){ sz = 26; bold = true; }
+            else if(l.s >= body*1.12){ sz = 24; bold = true; }
+            else { sz = 22; bold = false; }
+            paras.push('<w:p><w:pPr><w:spacing w:after="120"/></w:pPr><w:r><w:rPr>' +
+              (bold ? '<w:b/>' : '') + '<w:sz w:val="' + sz + '"/><w:szCs w:val="' + sz + '"/></w:rPr>' +
+              '<w:t xml:space="preserve">' + xmlEsc(l.t) + '</w:t></w:r></w:p>');
+          });
+          if(pi < data.pages.length-1)
+            paras.push('<w:p><w:r><w:br w:type="page"/></w:r></w:p>');
+        });
+        var docXml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+          '<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">' +
+          '<w:body>' + paras.join('') +
+          '<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1134" w:right="1134" w:bottom="1134" w:left="1134"/></w:sectPr>' +
+          '</w:body></w:document>';
+        var ct = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+          '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">' +
+          '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>' +
+          '<Default Extension="xml" ContentType="application/xml"/>' +
+          '<Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>' +
+          '</Types>';
+        var rels = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+          '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
+          '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>' +
+          '</Relationships>';
+        var zip = new window.JSZip();
+        zip.file('[Content_Types].xml', ct);
+        zip.folder('_rels').file('.rels', rels);
+        zip.folder('word').file('document.xml', docXml);
+        var blob = await zip.generateAsync({type:'blob', mimeType:'application/vnd.openxmlformats-officedocument.wordprocessingml.document', compression:'DEFLATE'});
+        var url = URL.createObjectURL(blob);
+        download(url, name + '.docx');
+        setTimeout(function(){ URL.revokeObjectURL(url); }, 6000);
+        msg.textContent = 'Saved ' + paras.length + ' paragraphs.';
+      }).catch(function(e){ pdfError(root, e); }).then(function(){ btn.disabled = false; });
+    });
+  }
+});
+
+/* ---------------------------------------------------------------- */
+TOOLS.push({
+  id:'pdf-to-excel', name:'PDF to Excel Converter', cat:'PDF', glyph:'▦', isNew:true,
+  blurb:'Recover tables from a PDF into a spreadsheet by reading text positions.',
+  tags:'excel xlsx csv table spreadsheet extract data rows columns',
+  ui:function(){ return `
+    <div class="panel">` + pdfDrop('Drop a PDF here') + `
+      <p class="hint" id="msg"></p>
+    </div>
+    <div class="panel" id="opts" hidden>
+      ` + caveat('A PDF has no table structure — columns are guessed from horizontal gaps between words. Plain grid tables come out well; merged cells, wrapped text and nested headers will need fixing by hand. <b>Always check the result against the original.</b>') + `
+      <div class="row">
+        <label class="f"><span>Column sensitivity</span><select id="gap">
+          <option value="1.2">Tight — more columns</option>
+          <option value="2" selected>Balanced</option>
+          <option value="3.5">Loose — fewer columns</option>
+        </select></label>
+        <label class="f"><span>Pages</span><input type="text" id="rg" placeholder="all, or 1-3"></label>
+      </div>
+      <div class="btns"><button class="btn" id="go">Download .xlsx</button><button class="btn alt" id="csv">Download .csv</button></div>
+      <div style="overflow:auto;margin-top:14px"><table class="tb" id="pv"></table></div>
+    </div>`;
+  },
+  init:function(root){
+    var data = null, name = 'table';
+    function build(){
+      var thresh = +$('#gap',root).value;
+      var spec = $('#rg',root).value.trim();
+      var want = spec ? parseRanges(spec, data.count) : null;
+      var rows = [];
+      data.pages.forEach(function(page, pi){
+        if(want && want.indexOf(pi) < 0) return;
+        /* gather every word with its x, grouped into rows by y */
+        page.forEach(function(line){
+          var cells = [], cur = '', gapRun = 0;
+          /* re-split the line on runs of spaces — pdf.js emits gaps as spacing */
+          var parts = line.t.split(/\s{2,}/);
+          if(parts.length > 1 && thresh <= 2){ cells = parts; }
+          else {
+            parts = line.t.split(/\s{3,}/);
+            cells = parts.length > 1 ? parts : [line.t];
+          }
+          rows.push(cells.map(function(c){
+            var t = c.trim();
+            /* keep leading zeros (IDs), percentages and codes as text —
+               silently turning 007 into 7 would corrupt real data */
+            if(/^0\d/.test(t) || /%$/.test(t)) return t;
+            var n = t.replace(/[,₹$\u20B9]/g,'');
+            return (n !== '' && !isNaN(n)) ? +n : t;
+          }));
+        });
+      });
+      return rows;
+    }
+    function preview(){
+      var rows = build();
+      var w = Math.max.apply(null, rows.map(function(r){ return r.length; }).concat([1]));
+      $('#pv',root).innerHTML = rows.slice(0,25).map(function(r){
+        var tds = '';
+        for(var i=0;i<w;i++) tds += '<td>' + esc(r[i] === undefined ? '' : r[i]) + '</td>';
+        return '<tr>' + tds + '</tr>';
+      }).join('');
+      $('#msg',root).textContent = rows.length + ' rows, up to ' + w + ' columns detected.';
+    }
+    dropzone($('#dz',root), 'application/pdf', function(fl){
+      if(!fl[0]) return;
+      var file = fl[0]; name = file.name.replace(/\.pdf$/i,'');
+      $('#msg',root).className = 'hint'; $('#msg',root).textContent = 'Reading…';
+      pdfLines(file).then(function(r){ data = r; $('#opts',root).hidden = false; preview(); })
+        .catch(function(e){ pdfError(root, e); });
+    });
+    ['#gap','#rg'].forEach(function(s){ $(s,root).addEventListener('input', function(){ if(data) preview(); }); });
+    $('#go',root).addEventListener('click', function(){
+      var btn = this; btn.disabled = true;
+      need(CDN_XLSX).then(function(){
+        var X = window.XLSX;
+        var wb = X.utils.book_new();
+        X.utils.book_append_sheet(wb, X.utils.aoa_to_sheet(build()), 'Sheet1');
+        X.writeFile(wb, name + '.xlsx');
+      }).catch(function(e){ pdfError(root, e); }).then(function(){ btn.disabled = false; });
+    });
+    $('#csv',root).addEventListener('click', function(){
+      var csv = build().map(function(r){
+        return r.map(function(c){
+          c = String(c === undefined ? '' : c);
+          return /[",\n]/.test(c) ? '"' + c.replace(/"/g,'""') + '"' : c;
+        }).join(',');
+      }).join('\n');
+      saveBlob(csv, 'text/csv', name + '.csv');
+    });
+  }
+});
+
+/* ---------------------------------------------------------------- */
+TOOLS.push({
+  id:'pdf-to-powerpoint', name:'PDF to Powerpoint Converter', cat:'PDF', glyph:'◧', isNew:true,
+  blurb:'Turn each PDF page into a slide, sized to match the original pages.',
+  tags:'powerpoint pptx slides presentation deck convert',
+  ui:function(){ return `
+    <div class="panel">` + pdfDrop('Drop a PDF here') + `
+      <p class="hint" id="info"></p>
+    </div>
+    <div class="panel" id="opts" hidden>
+      ` + caveat('Each page becomes a full-slide <b>picture</b>. The slides open and present normally, but you cannot click into the text to edit it — a PDF holds no editable shapes to recover.') + `
+      <div class="row">
+        <label class="f"><span>Slide size</span><select id="sz">
+          <option value="16x9">Widescreen 16:9</option>
+          <option value="4x3">Standard 4:3</option>
+          <option value="fit" selected>Match the PDF pages</option>
+        </select></label>
+        <label class="f"><span>Image quality</span><select id="q">
+          <option value="0.7">Smaller file</option><option value="0.85" selected>Balanced</option><option value="0.95">Sharpest</option>
+        </select></label>
+      </div>
+      <div class="btns"><button class="btn" id="go">Download .pptx</button></div>
+      <p class="hint" id="msg"></p>
+    </div>`;
+  },
+  init:function(root){
+    var file = null;
+    dropzone($('#dz',root), 'application/pdf', function(fl){
+      if(!fl[0]) return; file = fl[0];
+      $('#info',root).textContent = file.name;
+      $('#opts',root).hidden = false;
+    });
+    $('#go',root).addEventListener('click', function(){
+      var btn = this, msg = $('#msg',root);
+      btn.disabled = true; msg.className = 'hint'; msg.textContent = 'Rendering…';
+      Promise.all([pdfjs(), need(CDN_PPTX)]).then(async function(r){
+        var L = r[0];
+        var doc = await L.getDocument({data: await file.arrayBuffer()}).promise;
+        var pptx = new window.PptxGenJS();
+        var q = +$('#q',root).value, mode = $('#sz',root).value;
+        var first = await doc.getPage(1);
+        var v1 = first.getViewport({scale:1});
+        var SW, SH;
+        if(mode === '16x9'){ pptx.layout = 'LAYOUT_16x9'; SW = 10; SH = 5.625; }
+        else if(mode === '4x3'){ pptx.layout = 'LAYOUT_4x3'; SW = 10; SH = 7.5; }
+        else {
+          SW = 10; SH = +(10 * (v1.height/v1.width)).toFixed(2);
+          pptx.defineLayout({name:'PDFPAGE', width:SW, height:SH});
+          pptx.layout = 'PDFPAGE';
+        }
+        for(var n=1;n<=doc.numPages;n++){
+          msg.textContent = 'Rendering page ' + n + ' of ' + doc.numPages + '…';
+          var pg = await doc.getPage(n);
+          var vp = pg.getViewport({scale:1.6});
+          var c = document.createElement('canvas');
+          c.width = vp.width; c.height = vp.height;
+          var cx = c.getContext('2d');
+          cx.fillStyle = '#fff'; cx.fillRect(0,0,c.width,c.height);
+          await pg.render({canvasContext:cx, viewport:vp}).promise;
+          var slide = pptx.addSlide();
+          /* letterbox the page inside the slide rather than distorting it */
+          var pr = vp.width/vp.height, sr = SW/SH, w, h, x, y;
+          if(pr > sr){ w = SW; h = SW/pr; x = 0; y = (SH-h)/2; }
+          else { h = SH; w = SH*pr; y = 0; x = (SW-w)/2; }
+          slide.addImage({data:c.toDataURL('image/jpeg', q), x:x, y:y, w:w, h:h});
+        }
+        await pptx.writeFile({fileName: file.name.replace(/\.pdf$/i,'') + '.pptx'});
+        msg.textContent = 'Saved ' + doc.numPages + ' slides.';
+      }).catch(function(e){ pdfError(root, e); }).then(function(){ btn.disabled = false; });
+    });
+  }
+});
+
+/* ---------------------------------------------------------------- */
+TOOLS.push({
+  id:'pdf-to-ocr', name:'PDF to OCR Converter', cat:'PDF', glyph:'◉', isNew:true,
+  blurb:'Read the text in a scanned PDF and give you back a searchable copy.',
+  tags:'ocr scan searchable recognise text tesseract scanned image',
+  ui:function(){ return `
+    <div class="panel">` + pdfDrop('Drop a scanned PDF here') + `
+      <p class="hint" id="info"></p>
+    </div>
+    <div class="panel" id="opts" hidden>
+      ` + caveat('The recognition engine is about <b>12&nbsp;MB</b> and downloads the first time you use this — after that your browser caches it. Recognition runs on your device, so a long document takes a while. Accuracy depends on scan quality.') + `
+      <div class="row">
+        <label class="f"><span>Language</span><select id="lang">
+          <option value="eng">English</option>
+          <option value="eng+hin">English + Hindi</option>
+          <option value="hin">Hindi</option>
+          <option value="eng+mar">English + Marathi</option>
+        </select></label>
+        <label class="f"><span>Output</span><select id="mode">
+          <option value="pdf">Searchable PDF</option>
+          <option value="txt">Plain text</option>
+        </select></label>
+        <label class="f"><span>Pages</span><input type="text" id="rg" placeholder="all, or 1-5"></label>
+      </div>
+      <div class="btns"><button class="btn" id="go">Run OCR</button></div>
+      <p class="hint" id="msg"></p>
+      <div class="out" id="o" style="margin-top:14px" hidden></div>
+    </div>`;
+  },
+  init:function(root){
+    var file = null;
+    dropzone($('#dz',root), 'application/pdf', function(fl){
+      if(!fl[0]) return; file = fl[0];
+      $('#info',root).textContent = file.name + ' — ' + kb(file.size);
+      $('#opts',root).hidden = false;
+    });
+    $('#go',root).addEventListener('click', function(){
+      var btn = this, msg = $('#msg',root), mode = $('#mode',root).value;
+      btn.disabled = true; msg.className = 'hint'; msg.textContent = 'Loading the recognition engine…';
+      Promise.all([pdfjs(), need(CDN_TESS)]).then(async function(r){
+        var L = r[0];
+        var doc = await L.getDocument({data: await file.arrayBuffer()}).promise;
+        var want = $('#rg',root).value.trim() ? parseRanges($('#rg',root).value, doc.numPages) : null;
+        var worker = await window.Tesseract.createWorker($('#lang',root).value, 1, {
+          logger:function(m){
+            if(m.status === 'recognizing text') msg.textContent = 'Reading text… ' + Math.round(m.progress*100) + '%';
+            else if(m.status) msg.textContent = m.status.replace(/^\w/, function(c){ return c.toUpperCase(); }) + '…';
+          }
+        });
+        var texts = [], pdfs = [];
+        for(var n=1;n<=doc.numPages;n++){
+          if(want && want.indexOf(n-1) < 0) continue;
+          msg.textContent = 'Page ' + n + ' of ' + doc.numPages + ' — rendering…';
+          var pg = await doc.getPage(n);
+          var vp = pg.getViewport({scale:2});
+          var c = document.createElement('canvas');
+          c.width = vp.width; c.height = vp.height;
+          var cx = c.getContext('2d');
+          cx.fillStyle = '#fff'; cx.fillRect(0,0,c.width,c.height);
+          await pg.render({canvasContext:cx, viewport:vp}).promise;
+          var res = await worker.recognize(c, {}, mode === 'pdf' ? {text:true, pdf:true} : {text:true});
+          texts.push(res.data.text);
+          if(mode === 'pdf' && res.data.pdf) pdfs.push(res.data.pdf);
+        }
+        await worker.terminate();
+        var base = file.name.replace(/\.pdf$/i,'');
+        if(mode === 'pdf' && pdfs.length){
+          /* each page comes back as its own searchable PDF — merge them */
+          var P = await pdflib();
+          var out = await P.PDFDocument.create();
+          for(var i=0;i<pdfs.length;i++){
+            var one = await P.PDFDocument.load(new Uint8Array(pdfs[i]));
+            var cp = await out.copyPages(one, one.getPageIndices());
+            cp.forEach(function(p){ out.addPage(p); });
+          }
+          savePdf(await out.save(), base + '-searchable.pdf');
+          msg.textContent = 'Saved a searchable PDF — you can now select and search its text.';
+        } else {
+          var all = texts.join('\n\n');
+          $('#o',root).hidden = false;
+          $('#o',root).textContent = all;
+          saveBlob(all, 'text/plain', base + '-ocr.txt');
+          msg.textContent = 'Recognised ' + (all.match(/\S+/g)||[]).length + ' words.';
+        }
+      }).catch(function(e){ pdfError(root, e); }).then(function(){ btn.disabled = false; });
+    });
+  }
+});
+
+/* ---------------------------------------------------------------- */
+TOOLS.push({
+  id:'email-to-pdf', name:'Email to PDF Converter', cat:'PDF', glyph:'✉', isNew:true,
+  blurb:'Turn a saved .eml email into a PDF with its headers and message body.',
+  tags:'eml email message outlook thunderbird archive mail save',
+  ui:function(){ return `
+    <div class="panel">
+      <div class="drop" id="dz"><b>Drop an .eml file here</b><span>export one from Outlook, Apple Mail or Thunderbird</span></div>
+      <p class="hint" id="msg"></p>
+    </div>
+    <div class="panel" id="opts" hidden>
+      ` + caveat('The message text, headers and attachment list are kept. Inline images and HTML styling are flattened to plain text — this is an archive copy, not a pixel-perfect reproduction.') + `
+      <div class="btns"><button class="btn" id="go">Download PDF</button></div>
+      <div class="out" id="pv" style="margin-top:14px"></div>
+    </div>`;
+  },
+  init:function(root){
+    var mail = null, fname = 'email';
+
+    function decodeQP(s){
+      return s.replace(/=\r?\n/g,'').replace(/=([0-9A-F]{2})/gi, function(_,h){ return String.fromCharCode(parseInt(h,16)); });
+    }
+    function decodeB64(s){
+      try{
+        var bin = atob(s.replace(/\s/g,''));
+        var b = new Uint8Array(bin.length);
+        for(var i=0;i<bin.length;i++) b[i] = bin.charCodeAt(i);
+        return new TextDecoder('utf-8').decode(b);
+      }catch(e){ return s; }
+    }
+    /* =?UTF-8?B?...?= encoded-word headers */
+    function decodeHeader(s){
+      return s.replace(/=\?([^?]+)\?([BQ])\?([^?]*)\?=/gi, function(_, cs, enc, txt){
+        return enc.toUpperCase() === 'B' ? decodeB64(txt) : decodeQP(txt.replace(/_/g,' '));
+      });
+    }
+    function stripHtml(h){
+      return h.replace(/<(script|style)[\s\S]*?<\/\1>/gi,'')
+              .replace(/<br\s*\/?>/gi,'\n').replace(/<\/(p|div|tr|h[1-6]|li)>/gi,'\n')
+              .replace(/<li[^>]*>/gi,'• ').replace(/<[^>]+>/g,'')
+              .replace(/&nbsp;/gi,' ').replace(/&amp;/gi,'&').replace(/&lt;/gi,'<')
+              .replace(/&gt;/gi,'>').replace(/&quot;/gi,'"').replace(/&#39;/gi,"'")
+              .replace(/\n{3,}/g,'\n\n').trim();
+    }
+    function parseEml(raw){
+      raw = raw.replace(/\r\n/g,'\n');
+      var split = raw.indexOf('\n\n');
+      var head = raw.slice(0, split < 0 ? raw.length : split);
+      var rest = split < 0 ? '' : raw.slice(split+2);
+      head = head.replace(/\n[ \t]+/g,' ');             /* unfold */
+      var H = {};
+      head.split('\n').forEach(function(l){
+        var i = l.indexOf(':'); if(i < 0) return;
+        H[l.slice(0,i).toLowerCase().trim()] = decodeHeader(l.slice(i+1).trim());
+      });
+      var ctype = (H['content-type'] || 'text/plain');
+      var body = '', atts = [];
+      var bm = ctype.match(/boundary="?([^";]+)"?/i);
+      if(bm){
+        var parts = rest.split('--' + bm[1]);
+        var best = '', bestIsPlain = false;
+        parts.forEach(function(part){
+          var s2 = part.indexOf('\n\n'); if(s2 < 0) return;
+          var ph = part.slice(0,s2).replace(/\n[ \t]+/g,' ').toLowerCase();
+          var pb = part.slice(s2+2);
+          var enc = (ph.match(/content-transfer-encoding:\s*(\S+)/)||[])[1] || '';
+          var nm  = (part.slice(0,s2).match(/filename="?([^"\n;]+)"?/i)||[])[1];
+          if(nm){ atts.push(nm.trim()); return; }
+          if(enc === 'base64') pb = decodeB64(pb);
+          else if(enc === 'quoted-printable') pb = decodeQP(pb);
+          if(/content-type:\s*text\/plain/.test(ph) && !bestIsPlain){ best = pb; bestIsPlain = true; }
+          else if(/content-type:\s*text\/html/.test(ph) && !bestIsPlain && !best) best = stripHtml(pb);
+        });
+        body = best;
+      } else {
+        var enc0 = (H['content-transfer-encoding']||'').toLowerCase();
+        body = enc0 === 'base64' ? decodeB64(rest) : enc0 === 'quoted-printable' ? decodeQP(rest) : rest;
+        if(/text\/html/i.test(ctype)) body = stripHtml(body);
+      }
+      return {h:H, body:body.replace(/\n{3,}/g,'\n\n').trim(), atts:atts};
+    }
+
+    dropzone($('#dz',root), '.eml,message/rfc822', function(fl){
+      if(!fl[0]) return;
+      var f = fl[0]; fname = f.name.replace(/\.eml$/i,'');
+      var rd = new FileReader();
+      rd.onload = function(){
+        try{
+          mail = parseEml(rd.result);
+          var head = ['From: ' + (mail.h.from||'—'), 'To: ' + (mail.h.to||'—'),
+                      mail.h.cc ? 'Cc: ' + mail.h.cc : null,
+                      'Date: ' + (mail.h.date||'—'), 'Subject: ' + (mail.h.subject||'(no subject)'),
+                      mail.atts.length ? 'Attachments: ' + mail.atts.join(', ') : null].filter(Boolean);
+          $('#pv',root).textContent = head.join('\n') + '\n\n' + mail.body.slice(0,1500) + (mail.body.length>1500?'\n…':'');
+          $('#opts',root).hidden = false;
+          $('#msg',root).className = 'hint';
+          $('#msg',root).textContent = 'Parsed — ' + (mail.body.match(/\S+/g)||[]).length + ' words' +
+            (mail.atts.length ? ', ' + mail.atts.length + ' attachments listed' : '') + '.';
+        }catch(e){
+          $('#msg',root).className = 'err';
+          $('#msg',root).textContent = 'That file could not be read as an email. It should be a .eml file.';
+        }
+      };
+      rd.readAsText(f);
+    });
+    $('#go',root).addEventListener('click', function(){
+      var btn = this; btn.disabled = true;
+      var blocks = [{t:mail.h.subject || '(no subject)', s:17, b:true, gap:12}];
+      [['From', mail.h.from], ['To', mail.h.to], ['Cc', mail.h.cc], ['Date', mail.h.date]].forEach(function(p){
+        if(p[1]) blocks.push({t:p[0] + ': ' + p[1], s:9.5, gap:1});
+      });
+      if(mail.atts.length) blocks.push({t:'Attachments: ' + mail.atts.join(', '), s:9.5, gap:1});
+      blocks.push({t:' ', s:8, gap:10});
+      mail.body.split(/\n{2,}/).forEach(function(p){ blocks.push({t:p, s:11, gap:8}); });
+      textToPdf(blocks, mail.h.subject).then(function(doc){
+        doc.save(fname + '.pdf');
+      }).catch(function(e){ pdfError(root, e); }).then(function(){ btn.disabled = false; });
+    });
+  }
+});
+
+/* ---------------------------------------------------------------- */
+TOOLS.push({
+  id:'epub-to-pdf', name:'EPUB to PDF Converter', cat:'PDF', glyph:'◫', isNew:true,
+  blurb:'Convert an EPUB ebook into a readable, paginated PDF.',
+  tags:'epub ebook book convert kindle reader chapters',
+  ui:function(){ return `
+    <div class="panel">
+      <div class="drop" id="dz"><b>Drop an .epub file here</b><span>DRM-free books only</span></div>
+      <p class="hint" id="msg"></p>
+    </div>
+    <div class="panel" id="opts" hidden>
+      ` + caveat('The book is <b>reflowed</b> into a plain A4 layout: chapter headings and paragraphs are kept, but the publisher’s fonts, images and page design are not. DRM-protected books cannot be opened by anything except their store’s reader.') + `
+      <div class="row">
+        <label class="f"><span>Text size</span><select id="sz">
+          <option value="10">Compact</option><option value="11.5" selected>Normal</option><option value="14">Large print</option>
+        </select></label>
+        <label class="f"><span>Chapters</span><input type="text" id="rg" placeholder="all, or 1-5"></label>
+      </div>
+      <div class="btns"><button class="btn" id="go">Download PDF</button></div>
+      <div class="out" id="pv" style="margin-top:14px"></div>
+    </div>`;
+  },
+  init:function(root){
+    var chapters = [], title = 'book', fname = 'book';
+    function textOf(html){
+      return html.replace(/<(script|style|head)[\s\S]*?<\/\1>/gi,'')
+        .replace(/<h([1-6])[^>]*>([\s\S]*?)<\/h\1>/gi, function(_,l,t){ return '\u0001' + l + '\u0002' + t.replace(/<[^>]+>/g,'') + '\n'; })
+        .replace(/<br\s*\/?>/gi,'\n').replace(/<\/(p|div|li|tr)>/gi,'\n\n')
+        .replace(/<li[^>]*>/gi,'• ').replace(/<[^>]+>/g,'')
+        .replace(/&nbsp;/gi,' ').replace(/&amp;/gi,'&').replace(/&lt;/gi,'<').replace(/&gt;/gi,'>')
+        .replace(/&quot;/gi,'"').replace(/&#39;/gi,"'").replace(/&[a-z]+;/gi,'')
+        .replace(/[ \t]{2,}/g,' ').replace(/\n{3,}/g,'\n\n').trim();
+    }
+    dropzone($('#dz',root), '.epub,application/epub+zip', function(fl){
+      if(!fl[0]) return;
+      var f = fl[0]; fname = f.name.replace(/\.epub$/i,'');
+      var msg = $('#msg',root); msg.className = 'hint'; msg.textContent = 'Opening…';
+      need(CDN_ZIP).then(async function(){
+        var zip = await window.JSZip.loadAsync(await f.arrayBuffer());
+        if(zip.file(/META-INF\/(encryption|rights)\.xml/).length)
+          throw new Error('This EPUB is DRM-protected and cannot be converted.');
+        var container = await zip.file('META-INF/container.xml').async('string');
+        var opfPath = container.match(/full-path="([^"]+)"/)[1];
+        var base = opfPath.indexOf('/') >= 0 ? opfPath.slice(0, opfPath.lastIndexOf('/')+1) : '';
+        var opf = await zip.file(opfPath).async('string');
+        title = (opf.match(/<dc:title[^>]*>([\s\S]*?)<\/dc:title>/i)||[,fname])[1].replace(/<[^>]+>/g,'').trim();
+        var manifest = {};
+        (opf.match(/<item\b[^>]*>/gi)||[]).forEach(function(tag){
+          var id = (tag.match(/id="([^"]+)"/)||[])[1];
+          var href = (tag.match(/href="([^"]+)"/)||[])[1];
+          if(id && href) manifest[id] = decodeURIComponent(href);
+        });
+        var spine = (opf.match(/<itemref\b[^>]*>/gi)||[]).map(function(t){ return (t.match(/idref="([^"]+)"/)||[])[1]; }).filter(Boolean);
+        chapters = [];
+        for(var i=0;i<spine.length;i++){
+          var href = manifest[spine[i]]; if(!href) continue;
+          var file = zip.file(base + href) || zip.file(href);
+          if(!file) continue;
+          var body = textOf(await file.async('string'));
+          if(body.replace(/\u0001\d\u0002/g,'').trim().length > 40) chapters.push(body);
+        }
+        if(!chapters.length) throw new Error('No readable chapters found in this EPUB.');
+        $('#pv',root).textContent = chapters[0].replace(/\u0001(\d)\u0002/g,'').slice(0,900) + '…';
+        $('#opts',root).hidden = false;
+        msg.textContent = '“' + title + '” — ' + chapters.length + ' sections.';
+      }).catch(function(e){
+        $('#msg',root).className = 'err';
+        $('#msg',root).textContent = /DRM|readable/.test(e.message) ? e.message : 'That file could not be opened as an EPUB.';
+      });
+    });
+    $('#go',root).addEventListener('click', function(){
+      var btn = this, msg = $('#msg',root);
+      btn.disabled = true; msg.className = 'hint'; msg.textContent = 'Laying out…';
+      var size = +$('#sz',root).value;
+      var spec = $('#rg',root).value.trim();
+      var want = spec ? parseRanges(spec, chapters.length) : null;
+      var blocks = [{t:title, s:22, b:true, gap:26}];
+      chapters.forEach(function(ch, i){
+        if(want && want.indexOf(i) < 0) return;
+        ch.split(/\n{2,}/).forEach(function(p){
+          var m = p.match(/^\u0001(\d)\u0002([\s\S]*)$/);
+          if(m) blocks.push({t:m[2].trim(), s:size + (7 - +m[1])*1.6, b:true, gap:10});
+          else if(p.trim()) blocks.push({t:p.replace(/\u0001\d\u0002/g,'').trim(), s:size, gap:7});
+        });
+      });
+      textToPdf(blocks, title).then(function(doc){
+        doc.save(fname + '.pdf');
+        msg.textContent = 'Saved ' + doc.internal.getNumberOfPages() + ' pages.';
+      }).catch(function(e){ pdfError(root, e); }).then(function(){ btn.disabled = false; });
+    });
+  }
+});
+
+/* ==================================================================
+   SERVER-BACKED TOOLS
+   The only tools on this site that send your file anywhere. Each one
+   says so, plainly, before you use it. If no server is configured the
+   tool explains what it needs instead of failing silently.
+   ================================================================== */
+var API_KEY = 'toolshed:api';
+function apiBase(){
+  try{ return (localStorage.getItem(API_KEY) || '').replace(/\/+$/,''); }catch(e){ return ''; }
+}
+function setApiBase(u){
+  try{ localStorage.setItem(API_KEY, (u||'').trim().replace(/\/+$/,'')); }catch(e){}
+}
+/* every server tool opens with this block */
+function serverNotice(){
+  var base = apiBase();
+  return '<div class="panel" style="border:1px solid var(--accent)">' +
+    '<h3 style="margin-top:0">This tool uses a server</h3>' +
+    '<p class="hint" style="margin-top:0">Unlike every other tool here, this one <b>uploads your file</b> — the job needs software a browser does not have. The file is deleted the moment the conversion finishes and is never stored.</p>' +
+    '<label class="f" style="margin-top:14px"><span>Conversion server URL</span>' +
+      '<input type="text" id="apiUrl" placeholder="https://your-service.example.com" value="' + esc(base) + '"></label>' +
+    '<div class="btns"><button class="btn alt sm" id="apiSave">Save &amp; test</button>' +
+      '<span class="hint" id="apiState" style="align-self:center;margin:0">' +
+        (base ? 'Checking…' : 'No server set — deploy one first (see the README).') + '</span></div>' +
+  '</div>';
+}
+function wireServer(root, cap){
+  var state = $('#apiState', root);
+  function ping(){
+    var base = apiBase();
+    if(!base){ state.textContent = 'No server set — deploy one first (see the README).'; return; }
+    state.textContent = 'Checking…';
+    fetch(base + '/api/health', {method:'GET'})
+      .then(function(r){ return r.json(); })
+      .then(function(j){
+        if(cap && j.capabilities && !j.capabilities[cap]){
+          state.innerHTML = '<span style="color:#D7261E">Server is up, but the software this tool needs is missing from it.</span>';
+        } else {
+          state.textContent = 'Server ready · files up to ' + (j.max_upload_mb || '?') + ' MB.';
+        }
+      })
+      .catch(function(){
+        state.innerHTML = '<span style="color:#D7261E">Could not reach that server. Check the URL, and that its ALLOWED_ORIGINS includes this site.</span>';
+      });
+  }
+  $('#apiSave', root).addEventListener('click', function(){
+    setApiBase($('#apiUrl', root).value); ping();
+  });
+  ping();
+}
+/* POST a FormData job and download whatever comes back */
+function runJob(path, form, msg, outName, btn){
+  var base = apiBase();
+  if(!base){ msg.className = 'err'; msg.textContent = 'Set your conversion server URL above first.'; return; }
+  btn.disabled = true; msg.className = 'hint'; msg.textContent = 'Uploading and converting…';
+  fetch(base + path, {method:'POST', body:form})
+    .then(function(r){
+      if(!r.ok) return r.json().then(function(j){ throw new Error(j.error || ('Server returned ' + r.status)); },
+                                     function(){ throw new Error('Server returned ' + r.status); });
+      return r.blob();
+    })
+    .then(function(blob){
+      var url = URL.createObjectURL(blob);
+      download(url, outName);
+      setTimeout(function(){ URL.revokeObjectURL(url); }, 6000);
+      msg.className = 'hint'; msg.textContent = 'Done — ' + kb(blob.size) + ' downloaded.';
+    })
+    .catch(function(e){
+      msg.className = 'err';
+      msg.textContent = /Failed to fetch/.test(e.message)
+        ? 'Could not reach the server. It may be asleep — wait a minute and try again.'
+        : e.message;
+    })
+    .then(function(){ btn.disabled = false; });
+}
+
+/* ---- factory: the six "office file in, PDF out" tools ---- */
+function officeTool(id, name, glyph, blurb, tags, accept, hint){
+  TOOLS.push({
+    id:id, name:name, cat:'PDF', glyph:glyph, blurb:blurb, tags:tags, isNew:true,
+    ui:function(){ return serverNotice() + `
+      <div class="panel">
+        <div class="drop" id="dz"><b>Drop your file here</b><span>${esc(hint)}</span></div>
+        <p class="hint" id="info"></p>
+        <div class="btns"><button class="btn" id="go" disabled>Convert to PDF</button></div>
+        <p class="hint" id="msg"></p>
+      </div>`;
+    },
+    init:function(root){
+      wireServer(root, 'office');
+      var file = null;
+      dropzone($('#dz',root), accept, function(fl){
+        if(!fl[0]) return;
+        file = fl[0];
+        $('#info',root).textContent = file.name + ' — ' + kb(file.size);
+        $('#go',root).disabled = false;
+      });
+      $('#go',root).addEventListener('click', function(){
+        var fd = new FormData(); fd.append('file', file);
+        runJob('/api/office-to-pdf', fd, $('#msg',root),
+               file.name.replace(/\.[^.]+$/,'') + '.pdf', this);
+      });
+    }
+  });
+}
+officeTool('docx-to-pdf', 'DOCX to PDF', '📄',
+  'Convert a Word document to PDF with its layout, fonts and headers intact.',
+  'docx word document convert office layout', '.docx,.doc,.rtf', 'DOCX, DOC or RTF');
+officeTool('word-to-pdf', 'Word to PDF Converter', '🅦',
+  'Turn any Word file into a PDF, preserving formatting and fonts.',
+  'word doc docx to pdf export convert', '.docx,.doc,.rtf', 'DOCX, DOC or RTF');
+officeTool('pptx-to-pdf', 'PPTX to PDF', '◨',
+  'Convert a PowerPoint deck to PDF, one slide per page.',
+  'pptx ppt powerpoint slides deck presentation', '.pptx,.ppt', 'PPTX or PPT');
+officeTool('odf-to-pdf', 'ODF to PDF', '◇',
+  'Convert OpenDocument files — ODT, ODS and ODP — to PDF.',
+  'odf odt ods odp libreoffice openoffice opendocument', '.odt,.ods,.odp', 'ODT, ODS or ODP');
+officeTool('xps-to-pdf', 'XPS to PDF Converter', '⎙',
+  'Convert Microsoft XPS and OXPS documents to PDF.',
+  'xps oxps microsoft xml paper specification', '.xps,.oxps', 'XPS or OXPS');
+
+TOOLS.push({
+  id:'mobi-to-pdf', name:'MOBI to PDF Converter', cat:'PDF', glyph:'📕', isNew:true,
+  blurb:'Convert Kindle MOBI and AZW3 ebooks into readable PDFs.',
+  tags:'mobi azw azw3 kindle amazon ebook calibre convert',
+  ui:function(){ return serverNotice() + `
+    <div class="panel">
+      <div class="drop" id="dz"><b>Drop an ebook here</b><span>MOBI, AZW3, FB2 or LIT — DRM-free only</span></div>
+      <p class="hint" id="info"></p>
+      <p class="hint" style="border-left:2px solid var(--accent);padding-left:10px">Books bought from Kindle carry DRM and <b>cannot</b> be converted by this or any other tool. Only DRM-free files will work.</p>
+      <div class="btns"><button class="btn" id="go" disabled>Convert to PDF</button></div>
+      <p class="hint" id="msg"></p>
+    </div>`;
+  },
+  init:function(root){
+    wireServer(root, 'ebook');
+    var file = null;
+    dropzone($('#dz',root), '.mobi,.azw,.azw3,.fb2,.lit,.pdb', function(fl){
+      if(!fl[0]) return;
+      file = fl[0];
+      $('#info',root).textContent = file.name + ' — ' + kb(file.size);
+      $('#go',root).disabled = false;
+    });
+    $('#go',root).addEventListener('click', function(){
+      var fd = new FormData(); fd.append('file', file);
+      runJob('/api/ebook-to-pdf', fd, $('#msg',root), file.name.replace(/\.[^.]+$/,'') + '.pdf', this);
+    });
+  }
+});
+
+TOOLS.push({
+  id:'protect-pdf', name:'Protect PDF', cat:'PDF', glyph:'🔒', isNew:true,
+  blurb:'Lock a PDF with a password and restrict printing, copying or editing.',
+  tags:'protect password encrypt lock secure permissions restrict aes',
+  ui:function(){ return serverNotice() + `
+    <div class="panel">
+      <div class="drop" id="dz"><b>Drop a PDF here</b><span>the document to lock</span></div>
+      <p class="hint" id="info"></p>
+      <div class="row" style="margin-top:16px">
+        <label class="f"><span>Password to open</span><input type="text" id="up" placeholder="leave blank for none"></label>
+        <label class="f"><span>Owner password</span><input type="text" id="op" placeholder="defaults to the same"></label>
+      </div>
+      <div class="row" style="margin-top:13px">
+        <label class="f"><span>Allow printing</span><select id="pr"><option value="true">Yes</option><option value="false">No</option></select></label>
+        <label class="f"><span>Allow copying text</span><select id="cp"><option value="true">Yes</option><option value="false">No</option></select></label>
+        <label class="f"><span>Allow editing</span><select id="md"><option value="false">No</option><option value="true">Yes</option></select></label>
+      </div>
+      <p class="hint">Encrypted with AES-256. Keep the password somewhere safe — if you lose it the file cannot be recovered, by us or anyone else.</p>
+      <div class="btns"><button class="btn" id="go" disabled>Protect PDF</button></div>
+      <p class="hint" id="msg"></p>
+    </div>`;
+  },
+  init:function(root){
+    wireServer(root, 'qpdf');
+    var file = null;
+    dropzone($('#dz',root), 'application/pdf', function(fl){
+      if(!fl[0]) return;
+      file = fl[0];
+      $('#info',root).textContent = file.name + ' — ' + kb(file.size);
+      $('#go',root).disabled = false;
+    });
+    $('#go',root).addEventListener('click', function(){
+      var msg = $('#msg',root);
+      if(!$('#up',root).value && !$('#op',root).value){
+        msg.className = 'err'; msg.textContent = 'Enter at least one password.'; return;
+      }
+      var fd = new FormData();
+      fd.append('file', file);
+      fd.append('user_password', $('#up',root).value);
+      fd.append('owner_password', $('#op',root).value);
+      fd.append('allow_print', $('#pr',root).value);
+      fd.append('allow_copy', $('#cp',root).value);
+      fd.append('allow_modify', $('#md',root).value);
+      runJob('/api/pdf/protect', fd, msg, file.name.replace(/\.pdf$/i,'') + '-protected.pdf', this);
+    });
+  }
+});
+
+TOOLS.push({
+  id:'unlock-pdf', name:'Unlock PDF', cat:'PDF', glyph:'🔓', isNew:true,
+  blurb:'Remove a password you know, or lift printing and copying restrictions.',
+  tags:'unlock decrypt remove password restrictions permissions open',
+  ui:function(){ return serverNotice() + `
+    <div class="panel">
+      <div class="drop" id="dz"><b>Drop a locked PDF here</b><span>you will need its password</span></div>
+      <p class="hint" id="info"></p>
+      <label class="f" style="margin-top:16px"><span>Password</span><input type="text" id="pw" placeholder="leave blank if it only has restrictions"></label>
+      <p class="hint" style="border-left:2px solid var(--accent);padding-left:10px">This removes a password <b>you already know</b> from a file you are entitled to open. It does not and will not break encryption on a document you do not have the password for.</p>
+      <div class="btns"><button class="btn" id="go" disabled>Unlock PDF</button></div>
+      <p class="hint" id="msg"></p>
+    </div>`;
+  },
+  init:function(root){
+    wireServer(root, 'qpdf');
+    var file = null;
+    dropzone($('#dz',root), 'application/pdf', function(fl){
+      if(!fl[0]) return;
+      file = fl[0];
+      $('#info',root).textContent = file.name + ' — ' + kb(file.size);
+      $('#go',root).disabled = false;
+    });
+    $('#go',root).addEventListener('click', function(){
+      var fd = new FormData();
+      fd.append('file', file);
+      fd.append('password', $('#pw',root).value);
+      runJob('/api/pdf/unlock', fd, $('#msg',root), file.name.replace(/\.pdf$/i,'') + '-unlocked.pdf', this);
+    });
+  }
+});
+
+TOOLS.push({
+  id:'url-to-pdf', name:'URL to PDF Converter', cat:'PDF', glyph:'🌐', isNew:true,
+  blurb:'Save any public web page as a PDF, rendered exactly as a browser shows it.',
+  tags:'url website webpage html link save archive screenshot print',
+  ui:function(){ return serverNotice() + `
+    <div class="panel">
+      <label class="f"><span>Web page address</span><input type="text" id="u" placeholder="https://example.com/article"></label>
+      <div class="row" style="margin-top:14px">
+        <label class="f"><span>Paper size</span><select id="p"><option>A4</option><option>Letter</option><option>Legal</option><option>A3</option></select></label>
+        <label class="f"><span>Orientation</span><select id="l"><option value="false">Portrait</option><option value="true">Landscape</option></select></label>
+      </div>
+      <p class="hint">Only public pages work. Anything behind a login, and private or internal addresses, are refused for security reasons.</p>
+      <div class="btns"><button class="btn" id="go">Save as PDF</button></div>
+      <p class="hint" id="msg"></p>
+    </div>`;
+  },
+  init:function(root){
+    wireServer(root, 'browser');
+    $('#go',root).addEventListener('click', function(){
+      var msg = $('#msg',root), u = $('#u',root).value.trim();
+      if(!/^https?:\/\/.+\..+/.test(u)){
+        msg.className = 'err'; msg.textContent = 'Enter a full address starting with http:// or https://'; return;
+      }
+      var fd = new FormData();
+      fd.append('url', u);
+      fd.append('paper', $('#p',root).value);
+      fd.append('landscape', $('#l',root).value);
+      var name = 'webpage.pdf';
+      try{ name = (new URL(u).hostname.replace(/^www\./,'') || 'webpage') + '.pdf'; }catch(e){}
+      runJob('/api/url-to-pdf', fd, msg, name, this);
+    });
+  }
+});
+
+/* ==================================================================
+   ENGINE — rail, search, filters, favourites, routing, theme
+   ================================================================== */
+
+/* one saturated hue per category — this is what makes the grid read
+   as an app rather than a spreadsheet */
+var HUE = {
+  PDF:       '#FF3B30',
+  Image:     '#007AFF',
+  Text:      '#AF52DE',
+  Developer: '#5856D6',
+  Money:     '#28A745'
+};
+var CATS = [];
+TOOLS.forEach(function(t){ if(CATS.indexOf(t.cat) < 0) CATS.push(t.cat); });
+
+var favs = {};
+try{ favs = JSON.parse(localStorage.getItem('toolshed:favs') || '{}'); }catch(e){ favs = {}; }
+function saveFavs(){ try{ localStorage.setItem('toolshed:favs', JSON.stringify(favs)); }catch(e){} }
+
+var state = { cat:'All', q:'', view:'grid', onlyFav:false };
+try{ state.view = localStorage.getItem('toolshed:view') || 'grid'; }catch(e){}
+
+var view = $('#view'), nav = $('#nav'), rail = $('#rail'), scrim = $('#scrim');
+
+/* ---------- rail ---------- */
+function drawNav(){
+  var html = '<div class="rail-lbl">Browse</div>' +
+    '<button class="nv" data-c="All" aria-current="' + (state.cat==='All' && !state.onlyFav) + '">' +
+      '<span class="dot">▦</span>All tools<span class="n">' + TOOLS.length + '</span></button>' +
+    '<button class="nv" data-fav="1" aria-current="' + state.onlyFav + '">' +
+      '<span class="dot">★</span>Saved<span class="n">' + Object.keys(favs).length + '</span></button>' +
+    '<div class="rail-lbl">Categories</div>';
+  CATS.forEach(function(c){
+    var n = TOOLS.filter(function(t){ return t.cat === c; }).length;
+    html += '<button class="nv" data-c="' + c + '" aria-current="' + (state.cat===c && !state.onlyFav) + '">' +
+      '<span class="dot" style="color:' + (HUE[c]||'currentColor') + '">●</span>' + c +
+      '<span class="n">' + n + '</span></button>';
+  });
+  nav.innerHTML = html;
+}
+nav.addEventListener('click', function(e){
+  var b = e.target.closest('.nv'); if(!b) return;
+  if(b.dataset.fav){ state.onlyFav = true; state.cat = 'All'; }
+  else { state.onlyFav = false; state.cat = b.dataset.c; }
+  if(location.hash.replace(/^#\/?/,'')) location.hash = '#/';
+  else { drawNav(); drawIndex(); }
+  closeRail();
+});
+function closeRail(){ rail.classList.remove('open'); scrim.classList.remove('on'); }
+$('#burger').addEventListener('click', function(){
+  rail.classList.toggle('open'); scrim.classList.toggle('on');
+});
+scrim.addEventListener('click', closeRail);
+
+/* ---------- index view ---------- */
+function indexShell(){
+  return '' +
+  '<div class="pad">' +
+    '<div class="hero">' +
+      '<h1>All <span class="mark">' + TOOLS.length + '</span> tools, free and unmetered.</h1>' +
+      '<p>Squeeze an image, split a bill, work out an EMI. No signup, no watermark — and your files never leave this device.</p>' +
+      '<div class="searchwrap"><div class="box">' +
+        '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>' +
+        '<input id="q" type="search" placeholder="Search tools…" autocomplete="off" aria-label="Search tools" value="' + esc(state.q) + '">' +
+        '<span class="kbd">/</span>' +
+      '</div></div>' +
+    '</div>' +
+    '<div class="filters" id="filters"></div>' +
+    '<div id="grid" class="' + (state.view==='list'?'list':'') + '"></div>' +
+  '</div>';
+}
+function drawFilters(){
+  var f = $('#filters'); if(!f) return;
+  var all = ['All'].concat(CATS);
+  f.innerHTML = all.map(function(c){
+    var n = c==='All' ? TOOLS.length : TOOLS.filter(function(t){ return t.cat===c; }).length;
+    return '<button class="pill" data-c="' + c + '" aria-pressed="' + (state.cat===c && !state.onlyFav) + '">' +
+      c + '<span class="n">' + n + '</span></button>';
+  }).join('') +
+  '<div class="views">' +
+    '<button data-v="grid" aria-pressed="' + (state.view==='grid') + '" aria-label="Grid view">▦</button>' +
+    '<button data-v="list" aria-pressed="' + (state.view==='list') + '" aria-label="List view">☰</button>' +
+  '</div>';
+}
+function drawGrid(){
+  var grid = $('#grid'); if(!grid) return;
+  var q = state.q.toLowerCase().trim();
+  var list = TOOLS.filter(function(t){
+    if(state.onlyFav && !favs[t.id]) return false;
+    if(!state.onlyFav && state.cat !== 'All' && t.cat !== state.cat) return false;
+    if(!q) return true;
+    return (t.name + ' ' + t.blurb + ' ' + t.cat + ' ' + (t.tags||'')).toLowerCase().indexOf(q) >= 0;
+  });
+  grid.className = state.view === 'list' ? 'list' : '';
+  if(!list.length){
+    grid.innerHTML = '<div class="empty"><b>' +
+      (state.onlyFav ? 'Nothing saved yet' : 'No tools match that') + '</b>' +
+      (state.onlyFav ? 'Tap the star on any tool to keep it here.' : 'Try a shorter word, or pick a category.') + '</div>';
+    return;
+  }
+  grid.innerHTML = list.map(function(t){
+    return '<div class="tool" data-id="' + t.id + '" role="button" tabindex="0">' +
+      (t.isNew ? '<span class="new">NEW</span>' : '') +
+      '<button class="fav" data-fav="' + t.id + '" aria-pressed="' + (!!favs[t.id]) + '" aria-label="Save ' + esc(t.name) + '">' + (favs[t.id] ? '★' : '☆') + '</button>' +
+      '<span class="glyph" style="background:' + (HUE[t.cat]||'#666') + '">' + t.glyph + '</span>' +
+      '<h3>' + esc(t.name) + '</h3>' +
+      '<p>' + esc(t.blurb) + '</p>' +
+    '</div>';
+  }).join('');
+}
+function drawIndex(){
+  $('#cur').textContent = state.onlyFav ? 'Saved' : (state.cat === 'All' ? 'All tools' : state.cat);
+  $('#favBtn').setAttribute('aria-pressed', state.onlyFav);
+  drawFilters(); drawGrid();
+}
+
+/* delegated events on the stage (markup is re-rendered often) */
+$('#stage').addEventListener('click', function(e){
+  var pill = e.target.closest('.pill');
+  if(pill){ state.cat = pill.dataset.c; state.onlyFav = false; drawNav(); drawIndex(); return; }
+
+  var vb = e.target.closest('[data-v]');
+  if(vb){ state.view = vb.dataset.v; try{ localStorage.setItem('toolshed:view', state.view); }catch(err){} drawIndex(); return; }
+
+  var fv = e.target.closest('[data-fav]');
+  if(fv){
+    e.stopPropagation();
+    var id = fv.dataset.fav;
+    if(favs[id]) delete favs[id]; else favs[id] = 1;
+    saveFavs(); drawNav(); drawGrid(); return;
+  }
+  var card = e.target.closest('.tool');
+  if(card) location.hash = '#/' + card.dataset.id;
+});
+$('#stage').addEventListener('keydown', function(e){
+  if(e.key !== 'Enter' && e.key !== ' ') return;
+  var card = e.target.closest('.tool');
+  if(card && !e.target.closest('[data-fav]')){ e.preventDefault(); location.hash = '#/' + card.dataset.id; }
+});
+$('#stage').addEventListener('input', function(e){
+  if(e.target.id !== 'q') return;
+  state.q = e.target.value;
+  if(state.q){ state.cat = 'All'; state.onlyFav = false; drawNav(); }
+  drawFilters(); drawGrid();
+});
+$('#home').addEventListener('click', function(){ location.hash = '#/'; });
+$('#favBtn').addEventListener('click', function(){
+  state.onlyFav = !state.onlyFav; state.cat = 'All';
+  if(location.hash.replace(/^#\/?/,'')) location.hash = '#/';
+  else { drawNav(); drawIndex(); }
+});
+
+/* press "/" to jump to search */
+document.addEventListener('keydown', function(e){
+  if(e.key === '/' && !/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName)){
+    var box = $('#q'); if(box){ e.preventDefault(); box.focus(); box.select(); }
+  }
+  if(e.key === 'Escape'){ closeRail(); if(location.hash.replace(/^#\/?/,'')) location.hash = '#/'; }
+});
+
+/* ---------- routing ---------- */
+function route(){
+  var id = (location.hash || '').replace(/^#\/?/, '');
+  var tool = TOOLS.filter(function(t){ return t.id === id; })[0];
+  view.scrollTop = 0; $('#stage').scrollTop = 0;
+
+  if(!tool){
+    view.innerHTML = indexShell();
+    drawIndex();
+    document.title = 'All free tools — no signup, no upload | Toolshed';
+    return;
+  }
+  $('#cur').textContent = tool.name;
+  view.innerHTML =
+    '<div class="bench">' +
+      '<div class="bench-hd">' +
+        '<span class="glyph" style="background:' + (HUE[tool.cat]||'#666') + '">' + tool.glyph + '</span>' +
+        '<div><h2>' + esc(tool.name) + '</h2><p>' + esc(tool.blurb) + '</p></div>' +
+      '</div>' +
+      '<div id="mount">' + tool.ui() + '</div>' +
+    '</div>';
+  document.title = tool.name + ' — Toolshed';
+  try{ tool.init($('#mount')); }
+  catch(err){
+    console.error(err);
+    $('#mount').innerHTML = '<div class="panel"><p class="err">This tool failed to start. Reload the page and try again.</p></div>';
+  }
+}
+window.addEventListener('hashchange', route);
+
+/* ---------- theme ---------- */
+try{
+  var pref = localStorage.getItem('toolshed:dark');
+  if(pref === '1' || (pref === null && window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches))
+    document.documentElement.classList.add('dark');
+}catch(e){}
+$('#theme').addEventListener('click', function(){
+  var on = document.documentElement.classList.toggle('dark');
+  try{ localStorage.setItem('toolshed:dark', on ? '1' : '0'); }catch(e){}
+});
+
+drawNav(); route();
+})();
+</script>
+</body>
+</html>
