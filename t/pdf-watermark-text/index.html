@@ -356,7 +356,7 @@ if (!location.hash) history.replaceState(null, '', '#/pdf-watermark-text');
     <li><a href="https://koljacks.github.io/Toolshed/t/pdf-page-editor/" style="color:var(--muted)">PDF Page Editor</a></li>
     <li><a href="https://koljacks.github.io/Toolshed/t/pdf-compressor/" style="color:var(--muted)">PDF Compressor</a></li>
   </ul>
-  <p style="font-size:14.5px;margin-top:24px"><a href="https://koljacks.github.io/Toolshed/" style="color:var(--muted)">← All 44 free tools</a></p>
+  <p style="font-size:14.5px;margin-top:24px"><a href="https://koljacks.github.io/Toolshed/" style="color:var(--muted)">← All 61 free tools</a></p>
 </section>
 <div class="scrim" id="scrim"></div>
 
@@ -2815,6 +2815,1244 @@ TOOLS.push({
       try{ name = (new URL(u).hostname.replace(/^www\./,'') || 'webpage') + '.pdf'; }catch(e){}
       runJob('/api/url-to-pdf', fd, msg, name, this);
     });
+  }
+});
+
+/* ==================================================================
+   BATCH 2 — sixteen more tools, all pure client-side.
+   No new libraries: canvas, SubtleCrypto and plain JS only.
+   ================================================================== */
+
+/* ---------------------------------------------------------------- IMAGE */
+TOOLS.push({
+  id:'image-cropper', name:'Image Cropper', cat:'Image', glyph:'⌗', isNew:true,
+  blurb:'Drag a box over your photo to crop it, with optional fixed ratios.',
+  tags:'crop cut trim square profile picture aspect ratio thumbnail',
+  ui:function(){ return `
+    <div class="panel">
+      <div class="drop" id="dz"><b>Drop an image here</b><span>JPG, PNG or WEBP</span></div>
+      <div id="work" hidden>
+        <div class="row" style="margin-top:16px">
+          <label class="f"><span>Aspect ratio</span><select id="ar">
+            <option value="0">Free</option><option value="1">Square 1:1</option>
+            <option value="1.7778">Wide 16:9</option><option value="1.3333">Photo 4:3</option>
+            <option value="0.8">Portrait 4:5</option>
+          </select></label>
+          <label class="f"><span>Selection</span><input type="text" id="sel" readonly value="drag on the image"></label>
+        </div>
+        <div style="margin-top:14px;overflow:auto"><canvas id="cv" style="max-width:100%;border-radius:10px;cursor:crosshair;touch-action:none"></canvas></div>
+        <div class="btns"><button class="btn" id="go">Crop &amp; download</button><button class="btn alt" id="all">Select all</button></div>
+        <p class="hint" id="msg"></p>
+      </div>
+    </div>`;
+  },
+  init:function(root){
+    var img = null, name = 'image', cv = $('#cv',root), cx = null, scale = 1;
+    var box = null, drag = null;
+    function paint(){
+      cx.clearRect(0,0,cv.width,cv.height);
+      cx.drawImage(img, 0, 0, cv.width, cv.height);
+      if(!box) return;
+      cx.save();
+      cx.fillStyle = 'rgba(0,0,0,.45)';
+      cx.fillRect(0,0,cv.width,box.y);
+      cx.fillRect(0,box.y+box.h,cv.width,cv.height-box.y-box.h);
+      cx.fillRect(0,box.y,box.x,box.h);
+      cx.fillRect(box.x+box.w,box.y,cv.width-box.x-box.w,box.h);
+      cx.strokeStyle = '#FFB100'; cx.lineWidth = 2;
+      cx.strokeRect(box.x,box.y,box.w,box.h);
+      cx.restore();
+      $('#sel',root).value = Math.round(box.w/scale) + ' × ' + Math.round(box.h/scale) + ' px';
+    }
+    function pos(e){
+      var r = cv.getBoundingClientRect();
+      var t = e.touches ? e.touches[0] : e;
+      return { x:(t.clientX-r.left)*(cv.width/r.width), y:(t.clientY-r.top)*(cv.height/r.height) };
+    }
+    function start(e){ e.preventDefault(); drag = pos(e); box = {x:drag.x,y:drag.y,w:0,h:0}; }
+    function move(e){
+      if(!drag) return; e.preventDefault();
+      var p = pos(e), ar = +$('#ar',root).value;
+      var w = p.x-drag.x, h = p.y-drag.y;
+      if(ar){ h = (w<0?-1:1)*Math.abs(w)/ar; }
+      box = { x:Math.min(drag.x,drag.x+w), y:Math.min(drag.y,drag.y+h), w:Math.abs(w), h:Math.abs(h) };
+      box.w = Math.min(box.w, cv.width-box.x); box.h = Math.min(box.h, cv.height-box.y);
+      paint();
+    }
+    function end(){ drag = null; }
+    ['mousedown','touchstart'].forEach(function(t){ cv.addEventListener(t, start); });
+    ['mousemove','touchmove'].forEach(function(t){ cv.addEventListener(t, move); });
+    ['mouseup','mouseleave','touchend'].forEach(function(t){ cv.addEventListener(t, end); });
+
+    dropzone($('#dz',root), 'image/*', function(fl){
+      if(!fl[0]) return;
+      readImage(fl[0]).then(function(o){
+        img = o.img; name = o.name.replace(/\.\w+$/,'');
+        var max = 900;
+        scale = Math.min(1, max/img.naturalWidth);
+        cv.width = Math.round(img.naturalWidth*scale);
+        cv.height = Math.round(img.naturalHeight*scale);
+        cx = cv.getContext('2d');
+        box = null; paint();
+        $('#work',root).hidden = false;
+        $('#msg',root).textContent = 'Original: ' + img.naturalWidth + ' × ' + img.naturalHeight + ' px';
+      });
+    });
+    $('#all',root).addEventListener('click', function(){ box = {x:0,y:0,w:cv.width,h:cv.height}; paint(); });
+    $('#go',root).addEventListener('click', function(){
+      if(!img) return;
+      var b = box || {x:0,y:0,w:cv.width,h:cv.height};
+      if(b.w < 4 || b.h < 4){ $('#msg',root).className='err'; $('#msg',root).textContent='Drag a bigger area first.'; return; }
+      var sx = b.x/scale, sy = b.y/scale, sw = b.w/scale, sh = b.h/scale;
+      var c = document.createElement('canvas');
+      c.width = Math.round(sw); c.height = Math.round(sh);
+      c.getContext('2d').drawImage(img, sx, sy, sw, sh, 0, 0, c.width, c.height);
+      download(c.toDataURL('image/png'), name + '-cropped.png');
+      $('#msg',root).className='hint';
+      $('#msg',root).textContent = 'Saved ' + c.width + ' × ' + c.height + ' px.';
+    });
+  }
+});
+
+TOOLS.push({
+  id:'image-flip-rotate', name:'Image Flipper & Rotator', cat:'Image', glyph:'⟲', isNew:true,
+  blurb:'Mirror an image horizontally or vertically, or turn it in 90° steps.',
+  tags:'flip mirror rotate turn sideways upside down orientation',
+  ui:function(){ return `
+    <div class="panel">
+      <div class="drop" id="dz"><b>Drop an image here</b><span>changes apply on top of each other</span></div>
+      <div id="work" hidden>
+        <div class="btns" style="margin-top:16px">
+          <button class="btn alt sm" data-a="h">Flip horizontal</button>
+          <button class="btn alt sm" data-a="v">Flip vertical</button>
+          <button class="btn alt sm" data-a="l">Rotate left</button>
+          <button class="btn alt sm" data-a="r">Rotate right</button>
+          <button class="btn alt sm" data-a="0">Reset</button>
+        </div>
+        <div style="margin-top:14px"><canvas id="cv" style="max-width:100%;border-radius:10px"></canvas></div>
+        <div class="btns"><button class="btn" id="dl">Download PNG</button></div>
+        <p class="hint" id="msg"></p>
+      </div>
+    </div>`;
+  },
+  init:function(root){
+    var img = null, name = 'image', rot = 0, fh = false, fv = false, cv = $('#cv',root);
+    function paint(){
+      if(!img) return;
+      var flip = rot % 180 !== 0;
+      var w = flip ? img.naturalHeight : img.naturalWidth;
+      var h = flip ? img.naturalWidth : img.naturalHeight;
+      cv.width = w; cv.height = h;
+      var x = cv.getContext('2d');
+      x.save();
+      x.translate(w/2, h/2);
+      x.rotate(rot*Math.PI/180);
+      x.scale(fh?-1:1, fv?-1:1);
+      x.drawImage(img, -img.naturalWidth/2, -img.naturalHeight/2);
+      x.restore();
+      $('#msg',root).textContent = w + ' × ' + h + ' px' + (rot?' · rotated '+rot+'°':'') +
+        (fh?' · flipped H':'') + (fv?' · flipped V':'');
+    }
+    dropzone($('#dz',root), 'image/*', function(fl){
+      if(!fl[0]) return;
+      readImage(fl[0]).then(function(o){
+        img = o.img; name = o.name.replace(/\.\w+$/,'');
+        rot = 0; fh = fv = false;
+        $('#work',root).hidden = false; paint();
+      });
+    });
+    root.addEventListener('click', function(e){
+      var b = e.target.closest('[data-a]'); if(!b) return;
+      var a = b.dataset.a;
+      if(a==='h') fh = !fh;
+      if(a==='v') fv = !fv;
+      if(a==='l') rot = (rot+270)%360;
+      if(a==='r') rot = (rot+90)%360;
+      if(a==='0'){ rot = 0; fh = fv = false; }
+      paint();
+    });
+    $('#dl',root).addEventListener('click', function(){
+      if(img) download(cv.toDataURL('image/png'), name + '-edited.png');
+    });
+  }
+});
+
+TOOLS.push({
+  id:'image-color-picker', name:'Image Colour Picker', cat:'Image', glyph:'◍', isNew:true,
+  blurb:'Click anywhere on a photo to read its exact colour as HEX, RGB and HSL.',
+  tags:'colour color picker eyedropper hex rgb hsl palette sample',
+  ui:function(){ return `
+    <div class="panel">
+      <div class="drop" id="dz"><b>Drop an image here</b><span>then click any pixel</span></div>
+      <div id="work" hidden>
+        <div style="margin-top:14px"><canvas id="cv" style="max-width:100%;border-radius:10px;cursor:crosshair"></canvas></div>
+        <div class="row" style="margin-top:14px;align-items:center">
+          <div id="sw" style="height:64px;border-radius:11px;box-shadow:var(--hair);background:var(--inset)"></div>
+          <label class="f"><span>HEX</span><input type="text" id="hex" readonly value="—"></label>
+          <label class="f"><span>RGB</span><input type="text" id="rgb" readonly value="—"></label>
+          <label class="f"><span>HSL</span><input type="text" id="hsl" readonly value="—"></label>
+        </div>
+        <div class="btns"><button class="btn" id="cp">Copy HEX</button></div>
+        <p class="hint" id="hist"></p>
+      </div>
+    </div>`;
+  },
+  init:function(root){
+    var cv = $('#cv',root), picked = [];
+    function toHsl(r,g,b){
+      r/=255; g/=255; b/=255;
+      var mx = Math.max(r,g,b), mn = Math.min(r,g,b), h, s, l = (mx+mn)/2;
+      if(mx === mn){ h = s = 0; }
+      else {
+        var d = mx-mn;
+        s = l > .5 ? d/(2-mx-mn) : d/(mx+mn);
+        if(mx===r) h = ((g-b)/d + (g<b?6:0));
+        else if(mx===g) h = (b-r)/d + 2;
+        else h = (r-g)/d + 4;
+        h /= 6;
+      }
+      return [Math.round(h*360), Math.round(s*100), Math.round(l*100)];
+    }
+    dropzone($('#dz',root), 'image/*', function(fl){
+      if(!fl[0]) return;
+      readImage(fl[0]).then(function(o){
+        var s = Math.min(1, 900/o.img.naturalWidth);
+        cv.width = Math.round(o.img.naturalWidth*s);
+        cv.height = Math.round(o.img.naturalHeight*s);
+        cv.getContext('2d', {willReadFrequently:true}).drawImage(o.img, 0, 0, cv.width, cv.height);
+        $('#work',root).hidden = false;
+      });
+    });
+    cv.addEventListener('click', function(e){
+      var r = cv.getBoundingClientRect();
+      var x = Math.floor((e.clientX-r.left)*(cv.width/r.width));
+      var y = Math.floor((e.clientY-r.top)*(cv.height/r.height));
+      var d = cv.getContext('2d', {willReadFrequently:true}).getImageData(x,y,1,1).data;
+      var hex = '#' + [d[0],d[1],d[2]].map(function(n){ return ('0'+n.toString(16)).slice(-2); }).join('').toUpperCase();
+      var hsl = toHsl(d[0],d[1],d[2]);
+      $('#hex',root).value = hex;
+      $('#rgb',root).value = 'rgb(' + d[0] + ', ' + d[1] + ', ' + d[2] + ')';
+      $('#hsl',root).value = 'hsl(' + hsl[0] + ', ' + hsl[1] + '%, ' + hsl[2] + '%)';
+      $('#sw',root).style.background = hex;
+      picked.unshift(hex); picked = picked.slice(0,8);
+      $('#hist',root).innerHTML = 'Recent: ' + picked.map(function(c){
+        return '<span style="display:inline-block;width:15px;height:15px;border-radius:4px;background:' + c +
+               ';vertical-align:-3px;margin:0 3px;box-shadow:var(--hair)" title="' + c + '"></span>';
+      }).join('');
+    });
+    $('#cp',root).addEventListener('click', function(){ copy($('#hex',root).value, this); });
+  }
+});
+
+TOOLS.push({
+  id:'image-to-base64', name:'Image to Base64', cat:'Image', glyph:'⌸', isNew:true,
+  blurb:'Turn an image into a data URI you can paste straight into HTML or CSS.',
+  tags:'base64 data uri embed inline html css encode image',
+  ui:function(){ return `
+    <div class="panel">
+      <div class="drop" id="dz"><b>Drop an image here</b><span>small icons and logos work best</span></div>
+      <div id="work" hidden>
+        <div class="row" style="margin-top:16px">
+          <label class="f"><span>Output as</span><select id="fmt">
+            <option value="raw">Data URI</option><option value="css">CSS background</option><option value="html">HTML img tag</option>
+          </select></label>
+        </div>
+        <div class="btns"><button class="btn" id="cp">Copy</button></div>
+        <p class="hint" id="msg"></p>
+        <div class="out" id="o" style="margin-top:12px"></div>
+      </div>
+    </div>`;
+  },
+  init:function(root){
+    var data = '', name = 'image';
+    function render(){
+      var f = $('#fmt',root).value;
+      $('#o',root).textContent = f === 'css' ? 'background-image: url("' + data + '");'
+        : f === 'html' ? '<img src="' + data + '" alt="">'
+        : data;
+    }
+    dropzone($('#dz',root), 'image/*', function(fl){
+      if(!fl[0]) return;
+      var f = fl[0]; name = f.name;
+      readImage(f).then(function(o){
+        data = o.data;
+        $('#work',root).hidden = false;
+        render();
+        var grew = Math.round((data.length/f.size - 1)*100);
+        $('#msg',root).textContent = kb(f.size) + ' file becomes ' + kb(data.length) +
+          ' of text (about ' + grew + '% larger — base64 always inflates). Best kept under 10 KB.';
+      });
+    });
+    $('#fmt',root).addEventListener('change', render);
+    $('#cp',root).addEventListener('click', function(){ copy($('#o',root).textContent, this); });
+  }
+});
+
+/* ---------------------------------------------------------------- TEXT */
+TOOLS.push({
+  id:'find-replace', name:'Find & Replace', cat:'Text', glyph:'⇄', isNew:true,
+  blurb:'Replace every occurrence of a word or pattern across a whole document.',
+  tags:'find replace search swap substitute regex bulk edit',
+  ui:function(){ return `
+    <div class="panel">
+      <label class="f"><span>Your text</span><textarea id="t" placeholder="Paste your text here…"></textarea></label>
+      <div class="row" style="margin-top:14px">
+        <label class="f"><span>Find</span><input type="text" id="f"></label>
+        <label class="f"><span>Replace with</span><input type="text" id="r" placeholder="leave blank to delete"></label>
+        <label class="f"><span>Match case</span><select id="c"><option value="0">No</option><option value="1">Yes</option></select></label>
+        <label class="f"><span>Regular expression</span><select id="x"><option value="0">No</option><option value="1">Yes</option></select></label>
+      </div>
+      <div class="btns"><button class="btn" id="go">Replace all</button><button class="btn alt" id="cnt">Count matches</button><button class="btn alt" id="cp">Copy</button></div>
+      <p class="hint" id="msg"></p>
+    </div>`;
+  },
+  init:function(root){
+    function rx(){
+      var f = $('#f',root).value;
+      if(!f) return null;
+      var flags = 'g' + ($('#c',root).value === '1' ? '' : 'i');
+      try{
+        return $('#x',root).value === '1' ? new RegExp(f, flags)
+          : new RegExp(f.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'), flags);
+      }catch(e){ return e; }
+    }
+    function guard(r){
+      var m = $('#msg',root);
+      if(!r){ m.className='err'; m.textContent='Enter something to find.'; return false; }
+      if(r instanceof Error){ m.className='err'; m.textContent='That regular expression is not valid: ' + r.message; return false; }
+      m.className='hint'; return true;
+    }
+    $('#cnt',root).addEventListener('click', function(){
+      var r = rx(); if(!guard(r)) return;
+      var n = ($('#t',root).value.match(r) || []).length;
+      $('#msg',root).textContent = n + ' match' + (n===1?'':'es') + ' found.';
+    });
+    $('#go',root).addEventListener('click', function(){
+      var r = rx(); if(!guard(r)) return;
+      var t = $('#t',root), n = (t.value.match(r) || []).length;
+      t.value = t.value.replace(r, $('#r',root).value);
+      $('#msg',root).textContent = n + ' replacement' + (n===1?'':'s') + ' made.';
+    });
+    $('#cp',root).addEventListener('click', function(){ copy($('#t',root).value, this); });
+  }
+});
+
+TOOLS.push({
+  id:'text-diff', name:'Text Compare', cat:'Text', glyph:'≠', isNew:true,
+  blurb:'Compare two versions of a text and see exactly which lines changed.',
+  tags:'diff compare difference changes versions two texts contrast',
+  ui:function(){ return `
+    <div class="panel">
+      <div class="row">
+        <label class="f"><span>Original</span><textarea id="a" placeholder="Paste the first version…"></textarea></label>
+        <label class="f"><span>Changed</span><textarea id="b" placeholder="Paste the second version…"></textarea></label>
+      </div>
+      <div class="btns"><button class="btn" id="go">Compare</button></div>
+      <div class="stats" style="margin-top:14px" id="st" hidden>
+        <div class="stat"><b id="s1">0</b><span>Added</span></div>
+        <div class="stat"><b id="s2">0</b><span>Removed</span></div>
+        <div class="stat"><b id="s3">0</b><span>Unchanged</span></div>
+      </div>
+      <div class="out" id="o" style="margin-top:12px" hidden></div>
+    </div>`;
+  },
+  init:function(root){
+    /* longest common subsequence over lines — the standard diff core */
+    function diff(A, B){
+      var n = A.length, m = B.length;
+      var L = [];
+      for(var i=0;i<=n;i++) L.push(new Array(m+1).fill(0));
+      for(i=n-1;i>=0;i--) for(var j=m-1;j>=0;j--)
+        L[i][j] = A[i] === B[j] ? L[i+1][j+1]+1 : Math.max(L[i+1][j], L[i][j+1]);
+      var out = [], x = 0, y = 0;
+      while(x < n && y < m){
+        if(A[x] === B[y]){ out.push([' ', A[x]]); x++; y++; }
+        else if(L[x+1][y] >= L[x][y+1]){ out.push(['-', A[x]]); x++; }
+        else { out.push(['+', B[y]]); y++; }
+      }
+      while(x < n) out.push(['-', A[x++]]);
+      while(y < m) out.push(['+', B[y++]]);
+      return out;
+    }
+    $('#go',root).addEventListener('click', function(){
+      var d = diff($('#a',root).value.split('\n'), $('#b',root).value.split('\n'));
+      var add = 0, rem = 0, same = 0;
+      var html = d.map(function(p){
+        var col = p[0]==='+' ? '#28A745' : p[0]==='-' ? '#D7261E' : 'var(--muted)';
+        if(p[0]==='+') add++; else if(p[0]==='-') rem++; else same++;
+        return '<div style="color:' + col + '">' + esc(p[0] + ' ' + p[1]) + '</div>';
+      }).join('');
+      $('#s1',root).textContent = add;
+      $('#s2',root).textContent = rem;
+      $('#s3',root).textContent = same;
+      $('#st',root).hidden = false;
+      $('#o',root).hidden = false;
+      $('#o',root).innerHTML = html || '(both sides are empty)';
+    });
+  }
+});
+
+TOOLS.push({
+  id:'sort-lines', name:'Sort & Dedupe Lines', cat:'Text', glyph:'⇅', isNew:true,
+  blurb:'Sort a list alphabetically or numerically, reverse it, or strip duplicates.',
+  tags:'sort order alphabetical numerical duplicates unique list reverse shuffle',
+  ui:function(){ return `
+    <div class="panel">
+      <label class="f"><span>Your list, one item per line</span><textarea id="t" placeholder="banana&#10;apple&#10;cherry&#10;apple"></textarea></label>
+      <div class="row" style="margin-top:14px">
+        <label class="f"><span>Sort</span><select id="s">
+          <option value="az">A → Z</option><option value="za">Z → A</option>
+          <option value="num">Numerically</option><option value="len">By length</option>
+          <option value="rand">Shuffle</option><option value="none">Leave the order</option>
+        </select></label>
+        <label class="f"><span>Remove duplicates</span><select id="d"><option value="1">Yes</option><option value="0">No</option></select></label>
+        <label class="f"><span>Ignore case</span><select id="c"><option value="0">No</option><option value="1">Yes</option></select></label>
+      </div>
+      <div class="btns"><button class="btn" id="go">Apply</button><button class="btn alt" id="cp">Copy</button></div>
+      <p class="hint" id="msg"></p>
+    </div>`;
+  },
+  init:function(root){
+    $('#go',root).addEventListener('click', function(){
+      var t = $('#t',root);
+      var lines = t.value.split('\n').filter(function(l){ return l.trim() !== ''; });
+      var before = lines.length, ci = $('#c',root).value === '1';
+      if($('#d',root).value === '1'){
+        var seen = {};
+        lines = lines.filter(function(l){
+          var k = ci ? l.toLowerCase() : l;
+          if(seen[k]) return false; seen[k] = 1; return true;
+        });
+      }
+      var s = $('#s',root).value;
+      var key = function(l){ return ci ? l.toLowerCase() : l; };
+      if(s==='az') lines.sort(function(a,b){ return key(a).localeCompare(key(b)); });
+      if(s==='za') lines.sort(function(a,b){ return key(b).localeCompare(key(a)); });
+      if(s==='num') lines.sort(function(a,b){ return (parseFloat(a)||0) - (parseFloat(b)||0); });
+      if(s==='len') lines.sort(function(a,b){ return a.length - b.length; });
+      if(s==='rand') for(var i=lines.length-1;i>0;i--){ var j=Math.floor(Math.random()*(i+1)); var tmp=lines[i]; lines[i]=lines[j]; lines[j]=tmp; }
+      t.value = lines.join('\n');
+      $('#msg',root).textContent = before + ' lines in, ' + lines.length + ' out' +
+        (before !== lines.length ? ' (' + (before-lines.length) + ' removed)' : '') + '.';
+    });
+    $('#cp',root).addEventListener('click', function(){ copy($('#t',root).value, this); });
+  }
+});
+
+TOOLS.push({
+  id:'slug-generator', name:'URL Slug Generator', cat:'Text', glyph:'⁄', isNew:true,
+  blurb:'Turn a headline into a clean, lowercase URL slug with accents stripped.',
+  tags:'slug url permalink seo handle filename kebab clean',
+  ui:function(){ return `
+    <div class="panel">
+      <label class="f"><span>Title or headline</span><textarea id="t" style="min-height:90px" placeholder="How to Calculate GST in India — A Beginner's Guide"></textarea></label>
+      <div class="row" style="margin-top:14px">
+        <label class="f"><span>Separator</span><select id="s"><option value="-">Hyphen -</option><option value="_">Underscore _</option></select></label>
+        <label class="f"><span>Drop small words</span><select id="w"><option value="0">No</option><option value="1">Yes (a, the, of…)</option></select></label>
+        <label class="f"><span>Max length</span><input type="number" id="m" value="60" min="10" max="200"></label>
+      </div>
+      <div class="btns"><button class="btn" id="cp">Copy slug</button></div>
+      <div class="big mono" id="o" style="margin-top:16px;font-size:clamp(15px,2.6vw,21px);word-break:break-all">—</div>
+    </div>`;
+  },
+  init:function(root){
+    var STOP = ['a','an','the','of','in','on','at','to','for','and','or','but','is','are','was','were','with','by'];
+    function make(){
+      var sep = $('#s',root).value, max = +$('#m',root).value || 60;
+      var s = $('#t',root).value
+        .normalize('NFD').replace(/[\u0300-\u036f]/g,'')   /* café → cafe */
+        .toLowerCase()
+        .replace(/['’]/g,'')
+        .replace(/[^a-z0-9]+/g,' ')
+        .trim();
+      var words = s.split(/\s+/).filter(Boolean);
+      if($('#w',root).value === '1' && words.length > 3)
+        words = words.filter(function(w,i){ return i === 0 || STOP.indexOf(w) < 0; });
+      var out = words.join(sep);
+      if(out.length > max){
+        out = out.slice(0, max);
+        out = out.slice(0, out.lastIndexOf(sep) > 0 ? out.lastIndexOf(sep) : max);
+      }
+      $('#o',root).textContent = out || '—';
+    }
+    ['#t','#s','#w','#m'].forEach(function(x){ $(x,root).addEventListener('input', make); });
+    $('#cp',root).addEventListener('click', function(){ copy($('#o',root).textContent, this); });
+    make();
+  }
+});
+
+/* ---------------------------------------------------------- DEVELOPER */
+TOOLS.push({
+  id:'hash-generator', name:'Hash Generator', cat:'Developer', glyph:'⧗', isNew:true,
+  blurb:'Produce SHA-256 and other checksums for text or a file, in your browser.',
+  tags:'hash sha256 sha1 sha512 checksum digest fingerprint verify integrity',
+  ui:function(){ return `
+    <div class="panel">
+      <div class="row">
+        <label class="f"><span>Algorithm</span><select id="alg">
+          <option value="SHA-256">SHA-256</option><option value="SHA-1">SHA-1</option>
+          <option value="SHA-384">SHA-384</option><option value="SHA-512">SHA-512</option>
+        </select></label>
+        <label class="f"><span>Case</span><select id="cs"><option value="l">lowercase</option><option value="u">UPPERCASE</option></select></label>
+      </div>
+      <label class="f" style="margin-top:14px"><span>Text</span><textarea id="t" style="min-height:90px" placeholder="Type or paste anything…"></textarea></label>
+      <div class="btns"><button class="btn" id="go">Hash the text</button><button class="btn alt" id="cp">Copy</button></div>
+      <div class="drop" id="dz" style="margin-top:14px;padding:22px"><b>…or drop a file to checksum it</b><span>useful for verifying a download</span></div>
+      <div class="out" id="o" style="margin-top:12px">—</div>
+      <p class="hint" id="msg">MD5 is deliberately not offered — it has been considered broken for security use since 2004.</p>
+    </div>`;
+  },
+  init:function(root){
+    function show(buf){
+      var hex = Array.prototype.map.call(new Uint8Array(buf), function(b){ return ('0'+b.toString(16)).slice(-2); }).join('');
+      $('#o',root).textContent = $('#cs',root).value === 'u' ? hex.toUpperCase() : hex;
+    }
+    function run(bytes, label){
+      if(!(window.crypto && crypto.subtle)){
+        $('#msg',root).className = 'err';
+        $('#msg',root).textContent = 'Hashing needs a secure connection (https). Open this page over https and try again.';
+        return;
+      }
+      crypto.subtle.digest($('#alg',root).value, bytes).then(function(buf){
+        show(buf);
+        $('#msg',root).className = 'hint';
+        $('#msg',root).textContent = label;
+      }).catch(function(){
+        $('#msg',root).className = 'err';
+        $('#msg',root).textContent = 'That could not be hashed.';
+      });
+    }
+    $('#go',root).addEventListener('click', function(){
+      run(new TextEncoder().encode($('#t',root).value), 'Hashed ' + $('#t',root).value.length + ' characters.');
+    });
+    dropzone($('#dz',root), '*/*', function(fl){
+      if(!fl[0]) return;
+      var f = fl[0];
+      $('#msg',root).className='hint'; $('#msg',root).textContent = 'Reading ' + f.name + '…';
+      f.arrayBuffer().then(function(b){ run(b, f.name + ' — ' + kb(f.size)); });
+    });
+    $('#cp',root).addEventListener('click', function(){ copy($('#o',root).textContent, this); });
+  }
+});
+
+TOOLS.push({
+  id:'url-encoder', name:'URL Encoder / Decoder', cat:'Developer', glyph:'%', isNew:true,
+  blurb:'Percent-encode text for use in a URL, or decode a messy link back to plain text.',
+  tags:'url encode decode percent escape query string uri component link',
+  ui:function(){ return `
+    <div class="panel">
+      <label class="f"><span>Input</span><textarea id="a" class="mono"></textarea></label>
+      <div class="row" style="margin-top:12px">
+        <label class="f"><span>Scope</span><select id="m">
+          <option value="c">Component (encodes &amp; = ? /)</option>
+          <option value="f">Full URL (keeps &amp; = ? /)</option>
+        </select></label>
+      </div>
+      <div class="btns"><button class="btn" id="e">Encode ↓</button><button class="btn alt" id="d">Decode ↓</button><button class="btn alt" id="cp">Copy result</button></div>
+      <label class="f" style="margin-top:14px"><span>Result</span><textarea id="b" class="mono" readonly></textarea></label>
+      <p class="hint" id="msg"></p>
+    </div>`;
+  },
+  init:function(root){
+    var a = $('#a',root), b = $('#b',root), msg = $('#msg',root);
+    $('#e',root).addEventListener('click', function(){
+      var f = $('#m',root).value === 'f' ? encodeURI : encodeURIComponent;
+      b.value = f(a.value); msg.className='hint'; msg.textContent='';
+    });
+    $('#d',root).addEventListener('click', function(){
+      try{
+        var f = $('#m',root).value === 'f' ? decodeURI : decodeURIComponent;
+        b.value = f(a.value.trim()); msg.className='hint'; msg.textContent='';
+      }catch(e){ msg.className='err'; msg.textContent='That is not valid percent-encoded text — check for a stray % sign.'; }
+    });
+    $('#cp',root).addEventListener('click', function(){ copy(b.value, this); });
+  }
+});
+
+TOOLS.push({
+  id:'regex-tester', name:'Regex Tester', cat:'Developer', glyph:'⁂', isNew:true,
+  blurb:'Test a regular expression against sample text and see every match highlighted.',
+  tags:'regex regular expression pattern match test capture groups validate',
+  ui:function(){ return `
+    <div class="panel">
+      <div class="row">
+        <label class="f"><span>Pattern</span><input type="text" id="p" class="mono" placeholder="\\\\b[A-Z]{2,}\\\\b"></label>
+        <label class="f"><span>Flags</span><input type="text" id="f" class="mono" value="g" placeholder="gim"></label>
+      </div>
+      <label class="f" style="margin-top:14px"><span>Test against</span><textarea id="t" placeholder="Paste sample text here…"></textarea></label>
+      <p class="hint" id="msg"></p>
+      <div class="out" id="hl" style="margin-top:12px" hidden></div>
+      <div class="out" id="g" style="margin-top:10px" hidden></div>
+    </div>`;
+  },
+  init:function(root){
+    function run(){
+      var p = $('#p',root).value, msg = $('#msg',root);
+      if(!p){ msg.className='hint'; msg.textContent=''; $('#hl',root).hidden = true; $('#g',root).hidden = true; return; }
+      var flags = ($('#f',root).value || '').replace(/[^gimsuy]/g,'');
+      if(flags.indexOf('g') < 0) flags += 'g';
+      var re;
+      try{ re = new RegExp(p, flags); }
+      catch(e){ msg.className='err'; msg.textContent = e.message; $('#hl',root).hidden = true; return; }
+      var text = $('#t',root).value, out = '', last = 0, count = 0, groups = [], m, guard = 0;
+      while((m = re.exec(text)) !== null && guard++ < 5000){
+        if(m.index === re.lastIndex) re.lastIndex++;
+        out += esc(text.slice(last, m.index)) +
+          '<mark style="background:var(--accent);color:var(--accent-fg);border-radius:3px">' + esc(m[0]) + '</mark>';
+        last = m.index + (m[0].length || 0);
+        count++;
+        if(m.length > 1 && groups.length < 12)
+          groups.push('#' + count + ' → ' + m.slice(1).map(function(g,i){ return '$' + (i+1) + '=' + (g === undefined ? '(none)' : g); }).join('  '));
+      }
+      out += esc(text.slice(last));
+      msg.className='hint';
+      msg.textContent = count + ' match' + (count===1?'':'es') + ' found.';
+      $('#hl',root).hidden = !text;
+      $('#hl',root).innerHTML = out || '(no text to test)';
+      $('#g',root).hidden = !groups.length;
+      $('#g',root).textContent = groups.join('\n');
+    }
+    ['#p','#f','#t'].forEach(function(s){ $(s,root).addEventListener('input', run); });
+  }
+});
+
+TOOLS.push({
+  id:'color-converter', name:'Colour Code Converter', cat:'Developer', glyph:'◆', isNew:true,
+  blurb:'Convert a colour between HEX, RGB and HSL, with a live preview.',
+  tags:'colour color hex rgb hsl convert css code picker',
+  ui:function(){ return `
+    <div class="panel">
+      <div class="row" style="align-items:center">
+        <div id="sw" style="height:72px;border-radius:11px;box-shadow:var(--hair);background:#FFB100"></div>
+        <label class="f"><span>Pick</span><input type="color" id="pk" value="#ffb100" style="height:42px;padding:4px"></label>
+      </div>
+      <div class="row" style="margin-top:14px">
+        <label class="f"><span>HEX</span><input type="text" id="hex" value="#FFB100"></label>
+        <label class="f"><span>RGB</span><input type="text" id="rgb" value="rgb(255, 177, 0)"></label>
+        <label class="f"><span>HSL</span><input type="text" id="hsl" value="hsl(42, 100%, 50%)"></label>
+      </div>
+      <p class="hint" id="msg">Edit any box and the others follow.</p>
+    </div>`;
+  },
+  init:function(root){
+    function h2r(h){
+      h = h.trim().replace('#','');
+      if(h.length === 3) h = h.split('').map(function(c){ return c+c; }).join('');
+      if(!/^[0-9a-f]{6}$/i.test(h)) return null;
+      return [parseInt(h.slice(0,2),16), parseInt(h.slice(2,4),16), parseInt(h.slice(4,6),16)];
+    }
+    function r2h(r,g,b){ return '#' + [r,g,b].map(function(n){ return ('0'+Math.round(n).toString(16)).slice(-2); }).join('').toUpperCase(); }
+    function r2hsl(r,g,b){
+      r/=255;g/=255;b/=255;
+      var mx=Math.max(r,g,b), mn=Math.min(r,g,b), h, s, l=(mx+mn)/2;
+      if(mx===mn){h=s=0;}else{var d=mx-mn;s=l>.5?d/(2-mx-mn):d/(mx+mn);
+        h = mx===r ? ((g-b)/d+(g<b?6:0)) : mx===g ? (b-r)/d+2 : (r-g)/d+4; h/=6;}
+      return [Math.round(h*360), Math.round(s*100), Math.round(l*100)];
+    }
+    function hsl2r(h,s,l){
+      h/=360;s/=100;l/=100;
+      if(s===0){var v=Math.round(l*255);return [v,v,v];}
+      var q = l<.5 ? l*(1+s) : l+s-l*s, p = 2*l-q;
+      var f = function(t){ t=(t+1)%1;
+        return t<1/6?p+(q-p)*6*t : t<1/2?q : t<2/3?p+(q-p)*(2/3-t)*6 : p; };
+      return [Math.round(f(h+1/3)*255), Math.round(f(h)*255), Math.round(f(h-1/3)*255)];
+    }
+    function sync(rgb, from){
+      if(!rgb){ $('#msg',root).className='err'; $('#msg',root).textContent='That colour could not be read.'; return; }
+      $('#msg',root).className='hint'; $('#msg',root).textContent='Edit any box and the others follow.';
+      var hex = r2h(rgb[0],rgb[1],rgb[2]), hsl = r2hsl(rgb[0],rgb[1],rgb[2]);
+      if(from!=='hex') $('#hex',root).value = hex;
+      if(from!=='rgb') $('#rgb',root).value = 'rgb(' + rgb.join(', ') + ')';
+      if(from!=='hsl') $('#hsl',root).value = 'hsl(' + hsl[0] + ', ' + hsl[1] + '%, ' + hsl[2] + '%)';
+      if(from!=='pk') $('#pk',root).value = hex.toLowerCase();
+      $('#sw',root).style.background = hex;
+    }
+    $('#hex',root).addEventListener('input', function(){ sync(h2r(this.value),'hex'); });
+    $('#pk',root).addEventListener('input', function(){ sync(h2r(this.value),'pk'); });
+    $('#rgb',root).addEventListener('input', function(){
+      var m = this.value.match(/(\d+)\D+(\d+)\D+(\d+)/);
+      sync(m ? [+m[1],+m[2],+m[3]].map(function(n){ return Math.min(255,n); }) : null, 'rgb');
+    });
+    $('#hsl',root).addEventListener('input', function(){
+      var m = this.value.match(/(\d+)\D+(\d+)\D+(\d+)/);
+      sync(m ? hsl2r(+m[1], Math.min(100,+m[2]), Math.min(100,+m[3])) : null, 'hsl');
+    });
+  }
+});
+
+TOOLS.push({
+  id:'timestamp-converter', name:'Timestamp Converter', cat:'Developer', glyph:'◔', isNew:true,
+  blurb:'Convert a Unix timestamp to a readable date and back, in IST and UTC.',
+  tags:'unix timestamp epoch date time convert seconds milliseconds ist utc',
+  ui:function(){ return `
+    <div class="panel">
+      <div class="row">
+        <label class="f"><span>Unix timestamp</span><input type="text" id="ts" class="mono"></label>
+        <label class="f"><span>Units</span><select id="u"><option value="s">Seconds</option><option value="ms">Milliseconds</option></select></label>
+      </div>
+      <div class="btns"><button class="btn" id="now">Use current time</button><button class="btn alt" id="cp">Copy timestamp</button></div>
+      <div class="stats" style="margin-top:16px">
+        <div class="stat"><b id="ist" style="font-size:15px">—</b><span>India (IST)</span></div>
+        <div class="stat"><b id="utc" style="font-size:15px">—</b><span>UTC</span></div>
+        <div class="stat"><b id="rel" style="font-size:15px">—</b><span>Relative</span></div>
+      </div>
+      <label class="f" style="margin-top:16px"><span>Or pick a date and time</span><input type="datetime-local" id="dt"></label>
+      <p class="hint" id="msg"></p>
+    </div>`;
+  },
+  init:function(root){
+    function fmt(d, tz){
+      return d.toLocaleString('en-IN', {timeZone:tz, day:'2-digit', month:'short', year:'numeric',
+        hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:true});
+    }
+    function rel(ms){
+      var s = Math.round((ms - Date.now())/1000), a = Math.abs(s), past = s < 0;
+      var u = a<60?[a,'second']:a<3600?[Math.round(a/60),'minute']:a<86400?[Math.round(a/3600),'hour']
+            :a<2592000?[Math.round(a/86400),'day']:a<31536000?[Math.round(a/2592000),'month']:[Math.round(a/31536000),'year'];
+      return u[0] + ' ' + u[1] + (u[0]===1?'':'s') + (past ? ' ago' : ' from now');
+    }
+    function fromTs(){
+      var v = $('#ts',root).value.replace(/[^0-9-]/g,'');
+      if(!v){ return; }
+      var ms = $('#u',root).value === 'ms' ? +v : +v*1000;
+      var d = new Date(ms);
+      if(isNaN(d.getTime())){ $('#msg',root).className='err'; $('#msg',root).textContent='That is not a valid timestamp.'; return; }
+      $('#msg',root).className='hint'; $('#msg',root).textContent='';
+      $('#ist',root).textContent = fmt(d, 'Asia/Kolkata');
+      $('#utc',root).textContent = fmt(d, 'UTC');
+      $('#rel',root).textContent = rel(ms);
+      var off = d.getTimezoneOffset()*60000;
+      $('#dt',root).value = new Date(ms - off).toISOString().slice(0,16);
+    }
+    $('#ts',root).addEventListener('input', fromTs);
+    $('#u',root).addEventListener('change', fromTs);
+    $('#dt',root).addEventListener('input', function(){
+      var d = new Date(this.value);
+      if(isNaN(d.getTime())) return;
+      $('#ts',root).value = $('#u',root).value === 'ms' ? d.getTime() : Math.floor(d.getTime()/1000);
+      fromTs();
+    });
+    $('#now',root).addEventListener('click', function(){
+      $('#ts',root).value = $('#u',root).value === 'ms' ? Date.now() : Math.floor(Date.now()/1000);
+      fromTs();
+    });
+    $('#cp',root).addEventListener('click', function(){ copy($('#ts',root).value, this); });
+    $('#ts',root).value = Math.floor(Date.now()/1000);
+    fromTs();
+  }
+});
+
+/* -------------------------------------------------------------- MONEY */
+TOOLS.push({
+  id:'tip-splitter', name:'Tip & Bill Splitter', cat:'Money', glyph:'☕', isNew:true,
+  blurb:'Work out the tip and split a restaurant bill evenly between friends.',
+  tags:'tip bill split restaurant service charge gratuity share group dinner',
+  ui:function(){ return `
+    <div class="panel">
+      <div class="row">
+        <label class="f"><span>Bill amount (₹)</span><input type="number" id="b" value="2400"></label>
+        <label class="f"><span>Tip</span><select id="p">
+          <option value="0">None</option><option value="5">5%</option><option value="10" selected>10%</option>
+          <option value="15">15%</option><option value="20">20%</option>
+        </select></label>
+        <label class="f"><span>Split between</span><input type="number" id="n" value="4" min="1"></label>
+        <label class="f"><span>Round up per head</span><select id="r"><option value="0">No</option><option value="1">Yes</option></select></label>
+      </div>
+      <div style="margin-top:20px"><div class="big" id="each">—</div>
+      <p class="hint">Each person pays</p></div>
+      <div class="stats" style="margin-top:14px">
+        <div class="stat"><b id="tip">—</b><span>Tip</span></div>
+        <div class="stat"><b id="tot">—</b><span>Total bill</span></div>
+        <div class="stat"><b id="ex">—</b><span>Rounding extra</span></div>
+      </div>
+    </div>`;
+  },
+  init:function(root){
+    function calc(){
+      var b = +$('#b',root).value || 0, p = +$('#p',root).value, n = Math.max(1, +$('#n',root).value || 1);
+      var tip = b*p/100, total = b+tip, each = total/n;
+      var rounded = $('#r',root).value === '1' ? Math.ceil(each/10)*10 : each;
+      $('#each',root).textContent = inr(rounded);
+      $('#tip',root).textContent = inr(tip);
+      $('#tot',root).textContent = inr(total);
+      $('#ex',root).textContent = inr(Math.max(0, rounded*n - total));
+    }
+    $$('input,select', root).forEach(function(i){ i.addEventListener('input', calc); });
+    calc();
+  }
+});
+
+TOOLS.push({
+  id:'discount-calculator', name:'Discount Calculator', cat:'Money', glyph:'⌁', isNew:true,
+  blurb:'Find the sale price after a discount, or work out the percentage off.',
+  tags:'discount sale percent off price saving deal markdown offer',
+  ui:function(){ return `
+    <div class="panel">
+      <div class="row">
+        <label class="f"><span>Original price (₹)</span><input type="number" id="o" value="2999"></label>
+        <label class="f"><span>Discount</span><input type="number" id="d" value="30"></label>
+        <label class="f"><span>Discount is in</span><select id="m"><option value="p">Percent %</option><option value="a">Rupees ₹</option></select></label>
+        <label class="f"><span>Add GST after?</span><select id="g"><option value="0">No</option><option value="5">5%</option><option value="12">12%</option><option value="18">18%</option><option value="28">28%</option></select></label>
+      </div>
+      <div style="margin-top:20px"><div class="big" id="fin">—</div>
+      <p class="hint">You pay</p></div>
+      <div class="stats" style="margin-top:14px">
+        <div class="stat"><b id="sav">—</b><span>You save</span></div>
+        <div class="stat"><b id="pct">—</b><span>Percent off</span></div>
+        <div class="stat"><b id="gst">—</b><span>GST added</span></div>
+      </div>
+    </div>`;
+  },
+  init:function(root){
+    function calc(){
+      var o = +$('#o',root).value || 0, d = +$('#d',root).value || 0;
+      var off = $('#m',root).value === 'p' ? o*d/100 : d;
+      off = Math.min(off, o);
+      var net = o-off, g = +$('#g',root).value, tax = net*g/100;
+      $('#fin',root).textContent = inr(net+tax);
+      $('#sav',root).textContent = inr(off);
+      $('#pct',root).textContent = o ? Math.round(off/o*100) + '%' : '—';
+      $('#gst',root).textContent = g ? inr(tax) : '—';
+    }
+    $$('input,select', root).forEach(function(i){ i.addEventListener('input', calc); });
+    calc();
+  }
+});
+
+TOOLS.push({
+  id:'fd-calculator', name:'Fixed Deposit Calculator', cat:'Money', glyph:'▤', isNew:true,
+  blurb:'Work out the maturity amount and interest on a bank fixed deposit.',
+  tags:'fd fixed deposit maturity interest bank compound quarterly india savings',
+  ui:function(){ return `
+    <div class="panel">
+      <div class="row">
+        <label class="f"><span>Deposit amount (₹)</span><input type="number" id="p" value="200000"></label>
+        <label class="f"><span>Interest rate (% p.a.)</span><input type="number" id="r" value="7.1" step="0.05"></label>
+        <label class="f"><span>Term (years)</span><input type="number" id="y" value="5" step="0.5"></label>
+        <label class="f"><span>Compounded</span><select id="n">
+          <option value="4" selected>Quarterly (most banks)</option>
+          <option value="12">Monthly</option><option value="2">Half-yearly</option><option value="1">Yearly</option>
+        </select></label>
+      </div>
+      <div style="margin-top:20px"><div class="big" id="mat">—</div>
+      <p class="hint">Maturity amount</p></div>
+      <div class="stats" style="margin-top:14px">
+        <div class="stat"><b id="inv">—</b><span>You deposit</span></div>
+        <div class="stat"><b id="int">—</b><span>Interest earned</span></div>
+        <div class="stat"><b id="eff">—</b><span>Effective yield</span></div>
+      </div>
+      <p class="hint">Interest on an FD is taxable as income, and banks deduct TDS above the threshold — the figures above are before tax.</p>
+    </div>`;
+  },
+  init:function(root){
+    function calc(){
+      var P = +$('#p',root).value || 0, r = +$('#r',root).value/100, t = +$('#y',root).value || 0, n = +$('#n',root).value;
+      if(!(P>0 && t>0)) return;
+      var A = P*Math.pow(1 + r/n, n*t);
+      $('#mat',root).textContent = inr(A);
+      $('#inv',root).textContent = inr(P);
+      $('#int',root).textContent = inr(A-P);
+      $('#eff',root).textContent = (Math.pow(1+r/n, n)-1 > 0 ? ((Math.pow(1+r/n,n)-1)*100).toFixed(2) : '0') + '%';
+    }
+    $$('input,select', root).forEach(function(i){ i.addEventListener('input', calc); });
+    calc();
+  }
+});
+
+/* ==================================================================
+   MARRIAGE BIODATA CREATOR
+
+   Two problems this has to solve honestly:
+
+   1. SCRIPT SUPPORT. jsPDF's built-in fonts are Latin-1 only, so
+      Devanagari, Tamil, Bengali etc. render as blanks. Embedding a
+      Unicode font per script would add megabytes. Instead the biodata
+      is rendered to a canvas by html2canvas and placed in the PDF as
+      an image — the text is not selectable, but every script renders
+      exactly as the browser draws it. For a document that gets printed
+      or sent on WhatsApp, that is the right trade.
+
+   2. "ALL LANGUAGES". Twelve Indian languages ship as ready-made label
+      sets. Beyond that, every label is editable and any custom field
+      can be added, so a biodata can be produced in any language the
+      user's keyboard can type.
+   ================================================================== */
+var CDN_H2C = 'https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js';
+
+/* field key -> which section it belongs to */
+var BD_FIELDS = [
+  ['name','p'],['dob','p'],['tob','p'],['pob','p'],['height','p'],['weight','p'],
+  ['blood','p'],['complexion','p'],['marital','p'],['diet','p'],['tongue','p'],['hobbies','p'],
+  ['religion','r'],['caste','r'],['subcaste','r'],['gotra','r'],['rashi','r'],['nakshatra','r'],['manglik','r'],
+  ['education','e'],['occupation','e'],['company','e'],['income','e'],['workplace','e'],
+  ['father','f'],['fatherocc','f'],['mother','f'],['motherocc','f'],['siblings','f'],['native','f'],['ftype','f'],
+  ['person','c'],['phone','c'],['email','c'],['address','c']
+];
+var BD_SECTIONS = ['p','r','e','f','c'];
+
+/* Twelve label sets. Corrections are welcome — see the Contact page. */
+var BD_LANG = {
+  en:{ n:'English', p:'Personal Details', r:'Religious Details', e:'Education & Career', f:'Family Details', c:'Contact Details',
+    name:'Name', dob:'Date of Birth', tob:'Time of Birth', pob:'Place of Birth', height:'Height', weight:'Weight',
+    blood:'Blood Group', complexion:'Complexion', marital:'Marital Status', diet:'Diet', tongue:'Mother Tongue', hobbies:'Hobbies',
+    religion:'Religion', caste:'Caste', subcaste:'Sub-caste', gotra:'Gotra', rashi:'Rashi', nakshatra:'Nakshatra', manglik:'Manglik',
+    education:'Education', occupation:'Occupation', company:'Company', income:'Annual Income', workplace:'Work Location',
+    father:"Father's Name", fatherocc:"Father's Occupation", mother:"Mother's Name", motherocc:"Mother's Occupation",
+    siblings:'Siblings', native:'Native Place', ftype:'Family Type',
+    person:'Contact Person', phone:'Phone', email:'Email', address:'Address' },
+
+  hi:{ n:'हिन्दी', p:'व्यक्तिगत विवरण', r:'धार्मिक विवरण', e:'शिक्षा एवं व्यवसाय', f:'पारिवारिक विवरण', c:'संपर्क विवरण',
+    name:'नाम', dob:'जन्म तिथि', tob:'जन्म समय', pob:'जन्म स्थान', height:'कद', weight:'वजन',
+    blood:'रक्त समूह', complexion:'रंग', marital:'वैवाहिक स्थिति', diet:'आहार', tongue:'मातृभाषा', hobbies:'रुचियाँ',
+    religion:'धर्म', caste:'जाति', subcaste:'उपजाति', gotra:'गोत्र', rashi:'राशि', nakshatra:'नक्षत्र', manglik:'मांगलिक',
+    education:'शिक्षा', occupation:'व्यवसाय', company:'कंपनी', income:'वार्षिक आय', workplace:'कार्यस्थल',
+    father:'पिता का नाम', fatherocc:'पिता का व्यवसाय', mother:'माता का नाम', motherocc:'माता का व्यवसाय',
+    siblings:'भाई / बहन', native:'मूल निवास', ftype:'परिवार का प्रकार',
+    person:'संपर्क व्यक्ति', phone:'दूरभाष', email:'ईमेल', address:'पता' },
+
+  mr:{ n:'मराठी', p:'वैयक्तिक माहिती', r:'धार्मिक माहिती', e:'शिक्षण व व्यवसाय', f:'कौटुंबिक माहिती', c:'संपर्क माहिती',
+    name:'नाव', dob:'जन्म तारीख', tob:'जन्म वेळ', pob:'जन्म ठिकाण', height:'उंची', weight:'वजन',
+    blood:'रक्तगट', complexion:'वर्ण', marital:'वैवाहिक स्थिती', diet:'आहार', tongue:'मातृभाषा', hobbies:'छंद',
+    religion:'धर्म', caste:'जात', subcaste:'पोटजात', gotra:'गोत्र', rashi:'रास', nakshatra:'नक्षत्र', manglik:'मंगळ',
+    education:'शिक्षण', occupation:'व्यवसाय', company:'कंपनी', income:'वार्षिक उत्पन्न', workplace:'कार्यस्थळ',
+    father:'वडिलांचे नाव', fatherocc:'वडिलांचा व्यवसाय', mother:'आईचे नाव', motherocc:'आईचा व्यवसाय',
+    siblings:'भाऊ / बहीण', native:'मूळ गाव', ftype:'कुटुंब प्रकार',
+    person:'संपर्क व्यक्ती', phone:'दूरध्वनी', email:'ईमेल', address:'पत्ता' },
+
+  gu:{ n:'ગુજરાતી', p:'વ્યક્તિગત વિગતો', r:'ધાર્મિક વિગતો', e:'શિક્ષણ અને વ્યવસાય', f:'કૌટુંબિક વિગતો', c:'સંપર્ક વિગતો',
+    name:'નામ', dob:'જન્મ તારીખ', tob:'જન્મ સમય', pob:'જન્મ સ્થળ', height:'ઊંચાઈ', weight:'વજન',
+    blood:'રક્ત જૂથ', complexion:'વર્ણ', marital:'વૈવાહિક સ્થિતિ', diet:'આહાર', tongue:'માતૃભાષા', hobbies:'શોખ',
+    religion:'ધર્મ', caste:'જ્ઞાતિ', subcaste:'પેટા જ્ઞાતિ', gotra:'ગોત્ર', rashi:'રાશિ', nakshatra:'નક્ષત્ર', manglik:'માંગલિક',
+    education:'શિક્ષણ', occupation:'વ્યવસાય', company:'કંપની', income:'વાર્ષિક આવક', workplace:'કાર્યસ્થળ',
+    father:'પિતાનું નામ', fatherocc:'પિતાનો વ્યવસાય', mother:'માતાનું નામ', motherocc:'માતાનો વ્યવસાય',
+    siblings:'ભાઈ / બહેન', native:'વતન', ftype:'કુટુંબનો પ્રકાર',
+    person:'સંપર્ક વ્યક્તિ', phone:'ફોન', email:'ઈમેલ', address:'સરનામું' },
+
+  bn:{ n:'বাংলা', p:'ব্যক্তিগত তথ্য', r:'ধর্মীয় তথ্য', e:'শিক্ষা ও পেশা', f:'পারিবারিক তথ্য', c:'যোগাযোগের তথ্য',
+    name:'নাম', dob:'জন্ম তারিখ', tob:'জন্ম সময়', pob:'জন্মস্থান', height:'উচ্চতা', weight:'ওজন',
+    blood:'রক্তের গ্রুপ', complexion:'গায়ের রং', marital:'বৈবাহিক অবস্থা', diet:'খাদ্যাভ্যাস', tongue:'মাতৃভাষা', hobbies:'শখ',
+    religion:'ধর্ম', caste:'জাতি', subcaste:'উপজাতি', gotra:'গোত্র', rashi:'রাশি', nakshatra:'নক্ষত্র', manglik:'মাঙ্গলিক',
+    education:'শিক্ষা', occupation:'পেশা', company:'কোম্পানি', income:'বার্ষিক আয়', workplace:'কর্মস্থল',
+    father:'পিতার নাম', fatherocc:'পিতার পেশা', mother:'মাতার নাম', motherocc:'মাতার পেশা',
+    siblings:'ভাই / বোন', native:'নিজ গ্রাম', ftype:'পরিবারের ধরন',
+    person:'যোগাযোগকারী', phone:'ফোন', email:'ইমেল', address:'ঠিকানা' },
+
+  ta:{ n:'தமிழ்', p:'தனிப்பட்ட விவரங்கள்', r:'மத விவரங்கள்', e:'கல்வி மற்றும் தொழில்', f:'குடும்ப விவரங்கள்', c:'தொடர்பு விவரங்கள்',
+    name:'பெயர்', dob:'பிறந்த தேதி', tob:'பிறந்த நேரம்', pob:'பிறந்த இடம்', height:'உயரம்', weight:'எடை',
+    blood:'இரத்த வகை', complexion:'நிறம்', marital:'திருமண நிலை', diet:'உணவு முறை', tongue:'தாய்மொழி', hobbies:'பொழுதுபோக்கு',
+    religion:'மதம்', caste:'சாதி', subcaste:'உட்பிரிவு', gotra:'கோத்திரம்', rashi:'ராசி', nakshatra:'நட்சத்திரம்', manglik:'செவ்வாய் தோஷம்',
+    education:'கல்வி', occupation:'தொழில்', company:'நிறுவனம்', income:'ஆண்டு வருமானம்', workplace:'பணியிடம்',
+    father:'தந்தை பெயர்', fatherocc:'தந்தை தொழில்', mother:'தாய் பெயர்', motherocc:'தாய் தொழில்',
+    siblings:'சகோதர சகோதரிகள்', native:'சொந்த ஊர்', ftype:'குடும்ப வகை',
+    person:'தொடர்பு நபர்', phone:'தொலைபேசி', email:'மின்னஞ்சல்', address:'முகவரி' },
+
+  te:{ n:'తెలుగు', p:'వ్యక్తిగత వివరాలు', r:'మత వివరాలు', e:'విద్య మరియు వృత్తి', f:'కుటుంబ వివరాలు', c:'సంప్రదింపు వివరాలు',
+    name:'పేరు', dob:'పుట్టిన తేదీ', tob:'పుట్టిన సమయం', pob:'జన్మ స్థలం', height:'ఎత్తు', weight:'బరువు',
+    blood:'రక్త వర్గం', complexion:'ఛాయ', marital:'వైవాహిక స్థితి', diet:'ఆహారం', tongue:'మాతృభాష', hobbies:'అభిరుచులు',
+    religion:'మతం', caste:'కులం', subcaste:'ఉపకులం', gotra:'గోత్రం', rashi:'రాశి', nakshatra:'నక్షత్రం', manglik:'కుజ దోషం',
+    education:'విద్య', occupation:'వృత్తి', company:'సంస్థ', income:'వార్షిక ఆదాయం', workplace:'పని ప్రదేశం',
+    father:'తండ్రి పేరు', fatherocc:'తండ్రి వృత్తి', mother:'తల్లి పేరు', motherocc:'తల్లి వృత్తి',
+    siblings:'సోదర సోదరీమణులు', native:'స్వస్థలం', ftype:'కుటుంబ రకం',
+    person:'సంప్రదించవలసిన వ్యక్తి', phone:'ఫోన్', email:'ఇమెయిల్', address:'చిరునామా' },
+
+  kn:{ n:'ಕನ್ನಡ', p:'ವೈಯಕ್ತಿಕ ವಿವರಗಳು', r:'ಧಾರ್ಮಿಕ ವಿವರಗಳು', e:'ಶಿಕ್ಷಣ ಮತ್ತು ವೃತ್ತಿ', f:'ಕುಟುಂಬದ ವಿವರಗಳು', c:'ಸಂಪರ್ಕ ವಿವರಗಳು',
+    name:'ಹೆಸರು', dob:'ಜನ್ಮ ದಿನಾಂಕ', tob:'ಜನ್ಮ ಸಮಯ', pob:'ಜನ್ಮ ಸ್ಥಳ', height:'ಎತ್ತರ', weight:'ತೂಕ',
+    blood:'ರಕ್ತದ ಗುಂಪು', complexion:'ಬಣ್ಣ', marital:'ವೈವಾಹಿಕ ಸ್ಥಿತಿ', diet:'ಆಹಾರ', tongue:'ಮಾತೃಭಾಷೆ', hobbies:'ಹವ್ಯಾಸಗಳು',
+    religion:'ಧರ್ಮ', caste:'ಜಾತಿ', subcaste:'ಉಪಜಾತಿ', gotra:'ಗೋತ್ರ', rashi:'ರಾಶಿ', nakshatra:'ನಕ್ಷತ್ರ', manglik:'ಮಾಂಗಲಿಕ',
+    education:'ಶಿಕ್ಷಣ', occupation:'ವೃತ್ತಿ', company:'ಕಂಪನಿ', income:'ವಾರ್ಷಿಕ ಆದಾಯ', workplace:'ಕೆಲಸದ ಸ್ಥಳ',
+    father:'ತಂದೆಯ ಹೆಸರು', fatherocc:'ತಂದೆಯ ವೃತ್ತಿ', mother:'ತಾಯಿಯ ಹೆಸರು', motherocc:'ತಾಯಿಯ ವೃತ್ತಿ',
+    siblings:'ಸಹೋದರ ಸಹೋದರಿಯರು', native:'ಸ್ವಂತ ಊರು', ftype:'ಕುಟುಂಬದ ಪ್ರಕಾರ',
+    person:'ಸಂಪರ್ಕ ವ್ಯಕ್ತಿ', phone:'ದೂರವಾಣಿ', email:'ಇಮೇಲ್', address:'ವಿಳಾಸ' },
+
+  ml:{ n:'മലയാളം', p:'വ്യക്തിഗത വിവരങ്ങൾ', r:'മത വിവരങ്ങൾ', e:'വിദ്യാഭ്യാസവും ജോലിയും', f:'കുടുംബ വിവരങ്ങൾ', c:'ബന്ധപ്പെടാനുള്ള വിവരങ്ങൾ',
+    name:'പേര്', dob:'ജനന തീയതി', tob:'ജനന സമയം', pob:'ജനന സ്ഥലം', height:'ഉയരം', weight:'ഭാരം',
+    blood:'രക്തഗ്രൂപ്പ്', complexion:'നിറം', marital:'വൈവാഹിക നില', diet:'ആഹാരം', tongue:'മാതൃഭാഷ', hobbies:'വിനോദങ്ങൾ',
+    religion:'മതം', caste:'ജാതി', subcaste:'ഉപജാതി', gotra:'ഗോത്രം', rashi:'രാശി', nakshatra:'നക്ഷത്രം', manglik:'ചൊവ്വാ ദോഷം',
+    education:'വിദ്യാഭ്യാസം', occupation:'ജോലി', company:'സ്ഥാപനം', income:'വാർഷിക വരുമാനം', workplace:'ജോലി സ്ഥലം',
+    father:'അച്ഛന്റെ പേര്', fatherocc:'അച്ഛന്റെ ജോലി', mother:'അമ്മയുടെ പേര്', motherocc:'അമ്മയുടെ ജോലി',
+    siblings:'സഹോദരങ്ങൾ', native:'സ്വദേശം', ftype:'കുടുംബ തരം',
+    person:'ബന്ധപ്പെടേണ്ട വ്യക്തി', phone:'ഫോൺ', email:'ഇമെയിൽ', address:'വിലാസം' },
+
+  pa:{ n:'ਪੰਜਾਬੀ', p:'ਨਿੱਜੀ ਵੇਰਵੇ', r:'ਧਾਰਮਿਕ ਵੇਰਵੇ', e:'ਸਿੱਖਿਆ ਅਤੇ ਕਿੱਤਾ', f:'ਪਰਿਵਾਰਕ ਵੇਰਵੇ', c:'ਸੰਪਰਕ ਵੇਰਵੇ',
+    name:'ਨਾਮ', dob:'ਜਨਮ ਮਿਤੀ', tob:'ਜਨਮ ਸਮਾਂ', pob:'ਜਨਮ ਸਥਾਨ', height:'ਕੱਦ', weight:'ਭਾਰ',
+    blood:'ਖੂਨ ਦਾ ਗਰੁੱਪ', complexion:'ਰੰਗ', marital:'ਵਿਆਹੁਤਾ ਸਥਿਤੀ', diet:'ਖੁਰਾਕ', tongue:'ਮਾਤ ਭਾਸ਼ਾ', hobbies:'ਸ਼ੌਕ',
+    religion:'ਧਰਮ', caste:'ਜਾਤ', subcaste:'ਉਪ-ਜਾਤ', gotra:'ਗੋਤ', rashi:'ਰਾਸ਼ੀ', nakshatra:'ਨਛੱਤਰ', manglik:'ਮਾਂਗਲਿਕ',
+    education:'ਸਿੱਖਿਆ', occupation:'ਕਿੱਤਾ', company:'ਕੰਪਨੀ', income:'ਸਾਲਾਨਾ ਆਮਦਨ', workplace:'ਕੰਮ ਦਾ ਸਥਾਨ',
+    father:'ਪਿਤਾ ਦਾ ਨਾਮ', fatherocc:'ਪਿਤਾ ਦਾ ਕਿੱਤਾ', mother:'ਮਾਤਾ ਦਾ ਨਾਮ', motherocc:'ਮਾਤਾ ਦਾ ਕਿੱਤਾ',
+    siblings:'ਭੈਣ / ਭਰਾ', native:'ਜੱਦੀ ਸਥਾਨ', ftype:'ਪਰਿਵਾਰ ਦੀ ਕਿਸਮ',
+    person:'ਸੰਪਰਕ ਵਿਅਕਤੀ', phone:'ਫ਼ੋਨ', email:'ਈਮੇਲ', address:'ਪਤਾ' },
+
+  or:{ n:'ଓଡ଼ିଆ', p:'ବ୍ୟକ୍ତିଗତ ବିବରଣୀ', r:'ଧାର୍ମିକ ବିବରଣୀ', e:'ଶିକ୍ଷା ଓ ବୃତ୍ତି', f:'ପାରିବାରିକ ବିବରଣୀ', c:'ଯୋଗାଯୋଗ ବିବରଣୀ',
+    name:'ନାମ', dob:'ଜନ୍ମ ତାରିଖ', tob:'ଜନ୍ମ ସମୟ', pob:'ଜନ୍ମ ସ୍ଥାନ', height:'ଉଚ୍ଚତା', weight:'ଓଜନ',
+    blood:'ରକ୍ତ ଗୋଷ୍ଠୀ', complexion:'ରଙ୍ଗ', marital:'ବୈବାହିକ ସ୍ଥିତି', diet:'ଖାଦ୍ୟ', tongue:'ମାତୃଭାଷା', hobbies:'ସଉକ',
+    religion:'ଧର୍ମ', caste:'ଜାତି', subcaste:'ଉପଜାତି', gotra:'ଗୋତ୍ର', rashi:'ରାଶି', nakshatra:'ନକ୍ଷତ୍ର', manglik:'ମାଙ୍ଗଳିକ',
+    education:'ଶିକ୍ଷା', occupation:'ବୃତ୍ତି', company:'କମ୍ପାନୀ', income:'ବାର୍ଷିକ ଆୟ', workplace:'କର୍ମସ୍ଥଳ',
+    father:'ପିତାଙ୍କ ନାମ', fatherocc:'ପିତାଙ୍କ ବୃତ୍ତି', mother:'ମାତାଙ୍କ ନାମ', motherocc:'ମାତାଙ୍କ ବୃତ୍ତି',
+    siblings:'ଭାଇ / ଭଉଣୀ', native:'ମୂଳ ସ୍ଥାନ', ftype:'ପରିବାର ପ୍ରକାର',
+    person:'ଯୋଗାଯୋଗ ବ୍ୟକ୍ତି', phone:'ଫୋନ', email:'ଇମେଲ', address:'ଠିକଣା' },
+
+  ur:{ n:'اردو', rtl:true, p:'ذاتی تفصیلات', r:'مذہبی تفصیلات', e:'تعلیم اور پیشہ', f:'خاندانی تفصیلات', c:'رابطہ تفصیلات',
+    name:'نام', dob:'تاریخ پیدائش', tob:'وقت پیدائش', pob:'جائے پیدائش', height:'قد', weight:'وزن',
+    blood:'بلڈ گروپ', complexion:'رنگت', marital:'ازدواجی حیثیت', diet:'خوراک', tongue:'مادری زبان', hobbies:'مشاغل',
+    religion:'مذہب', caste:'ذات', subcaste:'ذیلی ذات', gotra:'گوتر', rashi:'راشی', nakshatra:'نکشتر', manglik:'منگلک',
+    education:'تعلیم', occupation:'پیشہ', company:'ادارہ', income:'سالانہ آمدنی', workplace:'مقام کار',
+    father:'والد کا نام', fatherocc:'والد کا پیشہ', mother:'والدہ کا نام', motherocc:'والدہ کا پیشہ',
+    siblings:'بہن / بھائی', native:'آبائی علاقہ', ftype:'خاندان کی قسم',
+    person:'رابطہ کار', phone:'فون', email:'ای میل', address:'پتہ' }
+};
+
+var BD_HEADERS = [
+  ['', '(none)'],
+  ['ॐ', 'ॐ'],
+  ['॥ श्री गणेशाय नमः ॥', '॥ श्री गणेशाय नमः ॥'],
+  ['ॐ श्री गुरुभ्यो नमः', 'ॐ श्री गुरुभ्यो नमः'],
+  ['ੴ ਸਤਿ ਨਾਮੁ', 'ੴ ਸਤਿ ਨਾਮੁ'],
+  ['بِسْمِ اللهِ', 'بِسْمِ اللهِ'],
+  ['✝', '✝'],
+  ['卐', '卐']
+];
+
+var BD_THEMES = {
+  gold:   { n:'Classic gold',  bg:'#FFFDF6', ink:'#3A2E12', accent:'#B8860B', rule:'#E4D3A2', head:'Georgia, "Times New Roman", serif' },
+  maroon: { n:'Royal maroon',  bg:'#FFF8F8', ink:'#3A1620', accent:'#8E1B34', rule:'#E8C4CD', head:'Georgia, "Times New Roman", serif' },
+  green:  { n:'Temple green',  bg:'#F7FBF7', ink:'#12291D', accent:'#1E6B4A', rule:'#BFDFCC', head:'Georgia, "Times New Roman", serif' },
+  minimal:{ n:'Modern minimal',bg:'#FFFFFF', ink:'#151515', accent:'#222222', rule:'#DDDDDD', head:'system-ui, -apple-system, sans-serif' }
+};
+
+TOOLS.push({
+  id:'marriage-biodata', name:'Marriage Biodata Maker', cat:'Text', glyph:'♥', isNew:true,
+  blurb:'Create a printable marriage biodata in 12 Indian languages, with a photo and a choice of designs.',
+  tags:'marriage biodata bio data shaadi matrimony rishta vivah profile wedding kundli horoscope india',
+  ui:function(){ return `
+    <div class="panel">
+      <div class="row">
+        <label class="f"><span>Language of labels</span><select id="lang">` +
+          Object.keys(BD_LANG).map(function(k){ return '<option value="'+k+'">'+BD_LANG[k].n+'</option>'; }).join('') +
+        `</select></label>
+        <label class="f"><span>Design</span><select id="theme">` +
+          Object.keys(BD_THEMES).map(function(k){ return '<option value="'+k+'">'+BD_THEMES[k].n+'</option>'; }).join('') +
+        `</select></label>
+        <label class="f"><span>Top blessing</span><select id="head">` +
+          BD_HEADERS.map(function(h,i){ return '<option value="'+i+'">'+esc(h[1])+'</option>'; }).join('') +
+        `</select></label>
+        <label class="f"><span>Style</span><select id="fmt">
+          <option value="in">Traditional Indian</option>
+          <option value="world">International (no caste or horoscope)</option>
+        </select></label>
+      </div>
+      <p class="hint">Type your answers in any language your keyboard supports — the labels above are just presets, and every one of them can be edited below.</p>
+    </div>
+
+    <div class="panel">
+      <h3 style="margin-top:0">Photo</h3>
+      <div class="drop" id="dz" style="padding:22px"><b>Drop a photo here</b><span>optional · stays on your device</span></div>
+      <div class="row" style="margin-top:13px">
+        <label class="f"><span>Shape</span><select id="pshape"><option value="12px">Rounded</option><option value="50%">Circle</option><option value="0">Square</option></select></label>
+        <label class="f"><span>Position</span><select id="ppos"><option value="right">Top right</option><option value="center">Centred</option><option value="none">No photo</option></select></label>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h3 style="margin-top:0">Details</h3>
+      <p class="hint" style="margin-top:0">Leave anything blank and it simply will not appear. Click a label to rename it.</p>
+      <div id="form"></div>
+      <div class="btns">
+        <button class="btn alt sm" id="addf">+ Add your own field</button>
+        <button class="btn alt sm" id="sample">Fill sample data</button>
+        <button class="btn alt sm" id="clear">Clear everything</button>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h3 style="margin-top:0">Preview</h3>
+      <div style="overflow:auto;background:var(--inset);border-radius:12px;padding:14px">
+        <div id="sheet"></div>
+      </div>
+      <div class="btns">
+        <button class="btn" id="png">Download image</button>
+        <button class="btn alt" id="pdf">Download PDF</button>
+        <button class="btn alt" id="print">Print</button>
+      </div>
+      <p class="hint" id="msg">The PDF is produced as a picture of this page, so every script prints exactly as you see it here.</p>
+    </div>`;
+  },
+  init:function(root){
+    var vals = {}, labels = {}, custom = [], photo = '', lang = 'en';
+
+    function L(key){
+      if(labels[key] !== undefined) return labels[key];
+      return (BD_LANG[lang] && BD_LANG[lang][key]) || BD_LANG.en[key] || key;
+    }
+    function shown(sec){
+      return $('#fmt',root).value === 'world' && sec === 'r' ? false : true;
+    }
+
+    /* ---------- the form ---------- */
+    function drawForm(){
+      var html = '';
+      BD_SECTIONS.forEach(function(sec){
+        if(!shown(sec)) return;
+        html += '<div style="margin:18px 0 6px;font-family:\'Geist Mono\',monospace;font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted)">' + esc(L(sec)) + '</div><div class="row">';
+        BD_FIELDS.filter(function(f){ return f[1] === sec; }).forEach(function(f){
+          html += '<label class="f"><span contenteditable="true" data-lab="' + f[0] + '" style="cursor:text;outline:none">' + esc(L(f[0])) + '</span>' +
+            '<input type="text" data-k="' + f[0] + '" value="' + esc(vals[f[0]]||'') + '"></label>';
+        });
+        html += '</div>';
+      });
+      if(custom.length){
+        html += '<div style="margin:18px 0 6px;font-family:\'Geist Mono\',monospace;font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted)">Your own fields</div><div class="row">';
+        custom.forEach(function(c,i){
+          html += '<label class="f"><span contenteditable="true" data-cl="' + i + '" style="cursor:text;outline:none">' + esc(c.label) + '</span>' +
+            '<input type="text" data-ck="' + i + '" value="' + esc(c.value) + '"></label>';
+        });
+        html += '</div>';
+      }
+      $('#form',root).innerHTML = html;
+    }
+
+    /* ---------- the biodata sheet ---------- */
+    function drawSheet(){
+      var t = BD_THEMES[$('#theme',root).value];
+      var rtl = !!(BD_LANG[lang] && BD_LANG[lang].rtl);
+      var hd = BD_HEADERS[+$('#head',root).value][0];
+      var ppos = $('#ppos',root).value;
+      var rows = '';
+
+      BD_SECTIONS.forEach(function(sec){
+        if(!shown(sec)) return;
+        var body = '';
+        BD_FIELDS.filter(function(f){ return f[1] === sec; }).forEach(function(f){
+          var v = (vals[f[0]]||'').trim(); if(!v) return;
+          body += '<tr><td style="padding:5px 12px 5px 0;color:' + t.accent + ';white-space:nowrap;vertical-align:top;font-weight:600;width:38%">' +
+            esc(L(f[0])) + '</td><td style="padding:5px 0;vertical-align:top">' + esc(v) + '</td></tr>';
+        });
+        if(sec === 'c' && custom.length){
+          custom.forEach(function(c){
+            if(!c.value.trim()) return;
+            body += '<tr><td style="padding:5px 12px 5px 0;color:' + t.accent + ';white-space:nowrap;vertical-align:top;font-weight:600">' +
+              esc(c.label) + '</td><td style="padding:5px 0;vertical-align:top">' + esc(c.value) + '</td></tr>';
+          });
+        }
+        if(!body) return;
+        rows += '<div style="margin:0 0 16px">' +
+          '<div style="font-family:' + t.head + ';font-size:14px;font-weight:700;color:' + t.accent +
+            ';letter-spacing:.06em;text-transform:uppercase;border-bottom:1.5px solid ' + t.rule + ';padding-bottom:4px;margin-bottom:8px">' +
+            esc(L(sec)) + '</div>' +
+          '<table style="width:100%;border-collapse:collapse;font-size:13.5px">' + body + '</table></div>';
+      });
+
+      var photoHtml = (photo && ppos !== 'none')
+        ? '<img src="' + photo + '" style="width:120px;height:150px;object-fit:cover;border-radius:' +
+          $('#pshape',root).value + ';border:3px solid ' + t.rule + '">'
+        : '';
+
+      $('#sheet',root).innerHTML =
+        '<div id="bdSheet" dir="' + (rtl?'rtl':'ltr') + '" style="width:794px;min-height:1123px;margin:0 auto;background:' + t.bg +
+          ';color:' + t.ink + ';padding:44px;box-sizing:border-box;font-family:system-ui,-apple-system,\'Noto Sans\',sans-serif;' +
+          'box-shadow:0 2px 18px rgba(0,0,0,.13);border:8px double ' + t.rule + '">' +
+          (hd ? '<div style="text-align:center;font-family:' + t.head + ';font-size:17px;color:' + t.accent + ';margin-bottom:6px">' + esc(hd) + '</div>' : '') +
+          '<div style="display:flex;gap:22px;align-items:flex-start;' + (ppos==='center'?'flex-direction:column;align-items:center;text-align:center;':'') + 'margin-bottom:20px">' +
+            '<div style="flex:1">' +
+              '<div style="font-family:' + t.head + ';font-size:27px;font-weight:700;letter-spacing:.01em;line-height:1.2">' +
+                esc(vals.name || L('name')) + '</div>' +
+              (vals.occupation ? '<div style="font-size:14px;color:' + t.accent + ';margin-top:3px">' + esc(vals.occupation) + '</div>' : '') +
+            '</div>' + photoHtml +
+          '</div>' +
+          '<div style="height:2px;background:' + t.rule + ';margin:0 0 18px"></div>' +
+          (rows || '<p style="color:#999">Fill in the details above and they will appear here.</p>') +
+        '</div>';
+    }
+
+    function draw(){ drawSheet(); }
+
+    /* ---------- events ---------- */
+    $('#form',root).addEventListener('input', function(e){
+      var t = e.target;
+      if(t.dataset.k !== undefined && t.dataset.k !== ''){ vals[t.dataset.k] = t.value; draw(); }
+      else if(t.dataset.ck !== undefined && t.dataset.ck !== ''){ custom[+t.dataset.ck].value = t.value; draw(); }
+      else if(t.dataset.lab){ labels[t.dataset.lab] = t.textContent.trim(); draw(); }
+      else if(t.dataset.cl){ custom[+t.dataset.cl].label = t.textContent.trim(); draw(); }
+    });
+    $('#lang',root).addEventListener('change', function(){
+      lang = this.value; labels = {};      /* presets replace any renames */
+      drawForm(); draw();
+    });
+    ['#theme','#head','#pshape','#ppos'].forEach(function(s){ $(s,root).addEventListener('change', draw); });
+    $('#fmt',root).addEventListener('change', function(){ drawForm(); draw(); });
+
+    $('#addf',root).addEventListener('click', function(){
+      custom.push({label:'New field', value:''}); drawForm(); draw();
+    });
+    $('#clear',root).addEventListener('click', function(){
+      vals = {}; custom = []; labels = {}; photo = ''; drawForm(); draw();
+    });
+    $('#sample',root).addEventListener('click', function(){
+      vals = { name:'Aarav Sharma', dob:'14 August 1996', tob:'06:42 AM', pob:'Pune, Maharashtra',
+        height:"5' 10\"", weight:'72 kg', blood:'B+', complexion:'Fair', marital:'Never married',
+        diet:'Vegetarian', tongue:'Marathi', hobbies:'Trekking, photography, classical music',
+        religion:'Hindu', caste:'Brahmin', subcaste:'Deshastha', gotra:'Kashyap', rashi:'Simha',
+        nakshatra:'Magha', manglik:'No',
+        education:'B.E. Computer Science, COEP Pune', occupation:'Software Engineer',
+        company:'Infosys Ltd.', income:'₹18 lakh per annum', workplace:'Pune',
+        father:'Shri Rajesh Sharma', fatherocc:'Retired Bank Manager', mother:'Smt. Sunita Sharma',
+        motherocc:'Homemaker', siblings:'One younger sister (studying)', native:'Nashik',
+        ftype:'Nuclear family',
+        person:'Shri Rajesh Sharma (Father)', phone:'+91 98765 43210',
+        email:'sharma.family@example.com', address:'Kothrud, Pune 411038' };
+      drawForm(); draw();
+    });
+
+    dropzone($('#dz',root), 'image/*', function(fl){
+      if(!fl[0]) return;
+      readImage(fl[0]).then(function(o){
+        /* downscale — a 6 MB phone photo would make the PDF enormous */
+        photo = drawTo(o.img, 360, 360*(o.img.naturalHeight/o.img.naturalWidth), 'image/jpeg', .85);
+        draw();
+      });
+    });
+
+    /* ---------- export ---------- */
+    function render(scale){
+      return need(CDN_H2C).then(function(){
+        return window.html2canvas($('#bdSheet',root), {
+          scale: scale, backgroundColor: null, useCORS: true, logging: false
+        });
+      });
+    }
+    $('#png',root).addEventListener('click', function(){
+      var b = this, msg = $('#msg',root);
+      b.disabled = true; msg.className='hint'; msg.textContent = 'Rendering…';
+      render(2).then(function(c){
+        download(c.toDataURL('image/png'), (vals.name||'biodata').replace(/\s+/g,'-').toLowerCase() + '.png');
+        msg.textContent = 'Image saved — good for WhatsApp.';
+      }).catch(function(){ msg.className='err'; msg.textContent='Could not render the image. Check your connection and try again.'; })
+        .then(function(){ b.disabled = false; });
+    });
+    $('#pdf',root).addEventListener('click', function(){
+      var b = this, msg = $('#msg',root);
+      b.disabled = true; msg.className='hint'; msg.textContent = 'Building the PDF…';
+      Promise.all([render(2), need(CDN_JSPDF)]).then(function(r){
+        var c = r[0];
+        var doc = new window.jspdf.jsPDF({unit:'pt', format:'a4', compress:true});
+        var W = doc.internal.pageSize.getWidth(), H = doc.internal.pageSize.getHeight();
+        var ratio = Math.min(W/c.width, H/c.height);
+        var w = c.width*ratio, h = c.height*ratio;
+        doc.addImage(c.toDataURL('image/jpeg', .93), 'JPEG', (W-w)/2, (H-h)/2, w, h, undefined, 'FAST');
+        doc.save((vals.name||'biodata').replace(/\s+/g,'-').toLowerCase() + '.pdf');
+        msg.textContent = 'PDF saved, A4 size and ready to print.';
+      }).catch(function(){ msg.className='err'; msg.textContent='Could not build the PDF. Check your connection and try again.'; })
+        .then(function(){ b.disabled = false; });
+    });
+    $('#print',root).addEventListener('click', function(){
+      var w = window.open('', '_blank');
+      if(!w){ $('#msg',root).className='err'; $('#msg',root).textContent='Your browser blocked the print window — allow pop-ups for this site.'; return; }
+      w.document.write('<!DOCTYPE html><title>' + esc(vals.name||'Biodata') + '</title>' +
+        '<style>body{margin:0}@page{size:A4;margin:0}</style>' + $('#sheet',root).innerHTML);
+      w.document.close();
+      setTimeout(function(){ w.focus(); w.print(); }, 400);
+    });
+
+    drawForm(); draw();
   }
 });
 
