@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>About — Toolshed</title>
+<meta name="description" content="What Toolshed is, who built it and why it is free.">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="canonical" href="https://koljacks.github.io/Toolshed/about/">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23FFB100'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,800&family=Geist:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{--paper:#F2F1EA;--surface:#fff;--ink:#12211E;--muted:#5E6D68;--line:#0000001a;--accent:#FFB100}
+@media (prefers-color-scheme:dark){:root{--paper:#0F1817;--surface:#161616;--ink:#E9EDE9;--muted:#93A19C;--line:#ffffff1a}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:Geist,system-ui,sans-serif;font-size:16px;line-height:1.7}
+.w{max-width:720px;margin:0 auto;padding:38px 22px 70px}
+.card{background:var(--surface);border-radius:16px;padding:34px;box-shadow:0 0 0 1px var(--line)}
+h1{font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:clamp(27px,5vw,38px);letter-spacing:-.03em;margin:0 0 6px}
+h2{font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:19px;letter-spacing:-.02em;margin:32px 0 8px}
+p,li{color:var(--muted)}
+a{color:var(--ink)}
+ul{padding-left:20px}
+.back{display:inline-block;margin-bottom:22px;color:var(--muted);text-decoration:none;font-size:14px}
+.upd{font-size:13px;color:var(--muted);margin-top:32px;padding-top:16px;border-top:1px solid var(--line)}
+</style>
+</head>
+<body>
+<div class="w">
+  <a class="back" href="https://koljacks.github.io/Toolshed/">← Toolshed</a>
+  <div class="card">
+    <h1>About</h1>
+
+    <p>Toolshed is a free collection of 44 everyday utilities — PDF tools, image tools, text tools, developer tools and calculators built for Indian users, including GST, EMI and SIP.</p>
+    <h2>Why it exists</h2>
+    <p>Most free tool sites take your file, upload it to a server you know nothing about, process it there, and ask you to trust that it was deleted afterwards. For a holiday photo that hardly matters. For a salary slip, a rent agreement or a bank statement, it matters a great deal.</p>
+    <p>Toolshed was built the other way round. 34 of the 44 tools run entirely inside your own browser using standard web APIs. Your file is opened by your own computer, processed by your own computer, and saved back to your own computer. It is never transmitted anywhere.</p>
+    <h2>The tools that are different</h2>
+    <p>A small number of jobs genuinely cannot be done in a browser — converting a Word document to PDF needs a full document layout engine, and password-protecting a PDF needs cryptography libraries that browsers do not expose. Those tools do send your file to a conversion server, and each one says so clearly before you use it. The file is deleted as soon as the conversion finishes.</p>
+    <h2>What it costs</h2>
+    <p>Nothing. There is no account, no upload limit that unlocks with payment, no watermark on anything you produce, and no trial that expires.</p>
+    <h2>Categories</h2>
+    <ul><li><strong>PDF</strong> — 26 tools, including Images to PDF, PDF Merger, PDF Splitter</li>
+    <li><strong>Image</strong> — 3 tools, including Image Compressor, Image Resizer, Image Converter</li>
+    <li><strong>Text</strong> — 4 tools, including Word Counter, Case Converter, Text Cleaner</li>
+    <li><strong>Developer</strong> — 5 tools, including JSON Formatter, Base64 Encoder / Decoder, UUID Generator</li>
+    <li><strong>Money</strong> — 6 tools, including EMI Calculator, SIP Calculator, GST Calculator</li></ul>
+    <h2>Contact</h2>
+    <p>Found a bug, or a tool that gets something wrong? Please tell me: <a href="mailto:you@example.com">you@example.com</a>.</p>
+    <p class="upd">Last updated 2026-08-19.</p>
+  </div>
+</div>
+</body>
+</html>

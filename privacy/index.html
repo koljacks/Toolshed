@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Privacy policy — Toolshed</title>
+<meta name="description" content="How Toolshed handles your files and data. Short version: almost nothing leaves your device.">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="canonical" href="https://koljacks.github.io/Toolshed/privacy/">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23FFB100'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,800&family=Geist:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{--paper:#F2F1EA;--surface:#fff;--ink:#12211E;--muted:#5E6D68;--line:#0000001a;--accent:#FFB100}
+@media (prefers-color-scheme:dark){:root{--paper:#0F1817;--surface:#161616;--ink:#E9EDE9;--muted:#93A19C;--line:#ffffff1a}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:Geist,system-ui,sans-serif;font-size:16px;line-height:1.7}
+.w{max-width:720px;margin:0 auto;padding:38px 22px 70px}
+.card{background:var(--surface);border-radius:16px;padding:34px;box-shadow:0 0 0 1px var(--line)}
+h1{font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:clamp(27px,5vw,38px);letter-spacing:-.03em;margin:0 0 6px}
+h2{font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:19px;letter-spacing:-.02em;margin:32px 0 8px}
+p,li{color:var(--muted)}
+a{color:var(--ink)}
+ul{padding-left:20px}
+.back{display:inline-block;margin-bottom:22px;color:var(--muted);text-decoration:none;font-size:14px}
+.upd{font-size:13px;color:var(--muted);margin-top:32px;padding-top:16px;border-top:1px solid var(--line)}
+</style>
+</head>
+<body>
+<div class="w">
+  <a class="back" href="https://koljacks.github.io/Toolshed/">← Toolshed</a>
+  <div class="card">
+    <h1>Privacy policy</h1>
+
+    <p>This policy explains exactly what happens to your data when you use Toolshed. It is deliberately specific rather than vague.</p>
+    <h2>Your files</h2>
+    <p>For the large majority of tools here, files you open are processed entirely by JavaScript running inside your own browser. They are never uploaded, never transmitted, and never seen by any server. Closing the tab discards them.</p>
+    <p>Nine tools are exceptions, because the work is impossible in a browser: DOCX to PDF, Word to PDF, PPTX to PDF, ODF to PDF, XPS to PDF, MOBI to PDF, Protect PDF, Unlock PDF and URL to PDF. These upload your file to a conversion server. Each of these tools displays a clear notice before you use it. On that server the file is written to a temporary folder, converted, returned to you, and the folder is deleted immediately. Nothing is retained, logged or backed up.</p>
+    <h2>What is stored on your device</h2>
+    <p>The site uses your browser's local storage — data that stays on your machine and is never sent anywhere — to remember:</p>
+    <ul>
+      <li>which tools you have starred</li>
+      <li>which tools you used recently</li>
+      <li>whether you prefer light or dark mode</li>
+      <li>the conversion server address, if you set one</li>
+    </ul>
+    <p>Clearing your browser data removes all of it.</p>
+    <h2>Analytics</h2>
+    <p>This site runs no analytics scripts and sets no tracking cookies of its own.</p>
+    <h2>Third parties</h2>
+    <p>Some tools load open-source libraries from public CDNs (cdnjs and jsDelivr) at the moment you open them. Doing so reveals your IP address to those CDNs, as with any website that loads external resources. No file data is shared with them.</p>
+    <p>Fonts are loaded from Google Fonts, which likewise receives your IP address.</p>
+    <p>If advertising is enabled on this site in future, this section will be updated to name the ad network and describe the cookies it sets, before any ads appear.</p>
+    <h2>Children</h2>
+    <p>This site is a general-purpose utility and is not directed at children under 13. It collects no personal information from anyone.</p>
+    <h2>Your rights</h2>
+    <p>Because no personal data is collected or stored on any server, there is nothing to request, export or delete. Data held in your own browser is under your control at all times.</p>
+    <h2>Questions</h2>
+    <p>Email <a href="mailto:you@example.com">you@example.com</a>.</p>
+    <p class="upd">Last updated 2026-08-19.</p>
+  </div>
+</div>
+</body>
+</html>
