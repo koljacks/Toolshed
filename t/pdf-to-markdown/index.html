@@ -7,6 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#e9e9ec" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#101010" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23FFB100'/%3E%3Ctext x='16' y='23' font-family='system-ui,sans-serif' font-size='19' font-weight='bold' text-anchor='middle' fill='%231A1300'%3E%E2%97%86%3C/text%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Geist+Mono:wght@400;500&family=Geist:wght@400;450;500;600&display=swap" rel="stylesheet">
@@ -252,6 +253,8 @@ table.tb tr:last-child td{border-bottom:0}
 .th .bar2 button:hover{background:var(--accent);color:var(--accent-fg)}
 .th .ix{position:absolute;top:0;left:0;background:#000000b3;color:#fff;font-family:"Geist Mono",monospace;font-size:9.5px;padding:2px 6px;border-radius:0 0 7px 0}
 
+.ad-slot{margin:22px 0 0;padding:10px;border:1px dashed var(--line);border-radius:12px;min-height:90px}
+.ad-lbl{display:block;font-family:"Geist Mono",monospace;font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:7px}
 .hide{display:none!important}
 
 /* ═══ RESPONSIVE ═══ */
@@ -317,7 +320,10 @@ if (!location.hash) history.replaceState(null, '', '#/pdf-to-markdown');
   <aside class="rail" id="rail">
     <div class="rail-hd"><span class="logo">◆</span><b>Toolshed</b></div>
     <nav id="nav"></nav>
-    <div class="rail-ft">Free forever. Everything runs on your device — no uploads, no accounts.</div>
+    <div class="rail-ft">
+      <div style="margin-bottom:9px">Free forever. Everything runs on your device.</div>
+      <nav id="railLinks" style="display:flex;flex-wrap:wrap;gap:4px 10px"></nav>
+    </div>
   </aside>
 
   <main class="stage" id="stage">
@@ -2828,6 +2834,47 @@ var HUE = {
 var CATS = [];
 TOOLS.forEach(function(t){ if(CATS.indexOf(t.cat) < 0) CATS.push(t.cat); });
 
+/* ------------------------------------------------------------------
+   ADVERTISING — off by default, and I'd leave it off for now.
+   This site's whole promise is "nothing leaves your browser". An ad
+   network is a tracking network, so switching this on trades away the
+   one thing that makes the site different. If you do turn it on you
+   also need a privacy policy that says so (build.js generates one).
+   To enable: set enabled:true and paste your AdSense publisher id.
+   ------------------------------------------------------------------ */
+var ADS = { enabled:false, client:'ca-pub-XXXXXXXXXXXXXXXX', slot:'' };
+
+function adSlot(where){
+  if(!ADS.enabled || !ADS.client) return '';
+  return '<div class="ad-slot" data-where="' + where + '">' +
+    '<span class="ad-lbl">Advertisement</span>' +
+    '<ins class="adsbygoogle" style="display:block" data-ad-client="' + ADS.client +
+    '" data-ad-slot="' + ADS.slot + '" data-ad-format="auto" data-full-width-responsive="true"></ins>' +
+  '</div>';
+}
+function pushAds(root){
+  if(!ADS.enabled || !ADS.client) return;
+  try{
+    $$('.adsbygoogle', root).forEach(function(){ (window.adsbygoogle = window.adsbygoogle || []).push({}); });
+  }catch(e){}
+}
+
+/* site root — works from / and from /t/<tool>/ alike */
+var SITE = location.pathname.replace(/index\.html$/, '').replace(/\/t\/[^\/]+\/?$/, '/');
+if(SITE.slice(-1) !== '/') SITE += '/';
+
+/* recently used tools */
+function recents(){
+  try{ return JSON.parse(localStorage.getItem('toolshed:recent') || '[]'); }catch(e){ return []; }
+}
+function noteRecent(id){
+  try{
+    var r = recents().filter(function(x){ return x !== id; });
+    r.unshift(id);
+    localStorage.setItem('toolshed:recent', JSON.stringify(r.slice(0, 6)));
+  }catch(e){}
+}
+
 var favs = {};
 try{ favs = JSON.parse(localStorage.getItem('toolshed:favs') || '{}'); }catch(e){ favs = {}; }
 function saveFavs(){ try{ localStorage.setItem('toolshed:favs', JSON.stringify(favs)); }catch(e){} }
@@ -2836,6 +2883,10 @@ var state = { cat:'All', q:'', view:'grid', onlyFav:false };
 try{ state.view = localStorage.getItem('toolshed:view') || 'grid'; }catch(e){}
 
 var view = $('#view'), nav = $('#nav'), rail = $('#rail'), scrim = $('#scrim');
+
+$('#railLinks').innerHTML = [['about','About'],['privacy','Privacy'],['terms','Terms'],['contact','Contact']]
+  .map(function(p){ return '<a href="' + SITE + p[0] + '/" style="color:var(--muted);text-decoration:none">' + p[1] + '</a>'; })
+  .join('<span style="opacity:.4">·</span>');
 
 /* ---------- rail ---------- */
 function drawNav(){
@@ -2880,8 +2931,10 @@ function indexShell(){
         '<span class="kbd">/</span>' +
       '</div></div>' +
     '</div>' +
+    '<div id="recentWrap"></div>' +
     '<div class="filters" id="filters"></div>' +
     '<div id="grid" class="' + (state.view==='list'?'list':'') + '"></div>' +
+    adSlot('index') +
   '</div>';
 }
 function drawFilters(){
@@ -2923,16 +2976,34 @@ function drawGrid(){
     '</div>';
   }).join('');
 }
+function drawRecent(){
+  var wrap = $('#recentWrap'); if(!wrap) return;
+  var ids = recents().filter(function(id){ return TOOLS.some(function(t){ return t.id === id; }); });
+  if(ids.length < 2 || state.q || state.onlyFav || state.cat !== 'All'){ wrap.innerHTML = ''; return; }
+  wrap.innerHTML = '<div style="margin:26px 0 0">' +
+    '<div style="font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);font-family:\'Geist Mono\',monospace;margin-bottom:9px">Pick up where you left off</div>' +
+    '<div style="display:flex;gap:8px;flex-wrap:wrap">' +
+      ids.map(function(id){
+        var t = TOOLS.filter(function(x){ return x.id === id; })[0];
+        return '<button class="pill" data-goto="' + t.id + '">' +
+          '<span style="width:8px;height:8px;border-radius:3px;background:' + (HUE[t.cat]||'#666') + '"></span>' +
+          esc(t.name) + '</button>';
+      }).join('') +
+    '</div></div>';
+}
 function drawIndex(){
   $('#cur').textContent = state.onlyFav ? 'Saved' : (state.cat === 'All' ? 'All tools' : state.cat);
   $('#favBtn').setAttribute('aria-pressed', state.onlyFav);
-  drawFilters(); drawGrid();
+  drawFilters(); drawRecent(); drawGrid(); pushAds(view);
 }
 
 /* delegated events on the stage (markup is re-rendered often) */
 $('#stage').addEventListener('click', function(e){
+  var goto = e.target.closest('[data-goto]');
+  if(goto){ location.hash = '#/' + goto.dataset.goto; return; }
+
   var pill = e.target.closest('.pill');
-  if(pill){ state.cat = pill.dataset.c; state.onlyFav = false; drawNav(); drawIndex(); return; }
+  if(pill && pill.dataset.c){ state.cat = pill.dataset.c; state.onlyFav = false; drawNav(); drawIndex(); return; }
 
   var vb = e.target.closest('[data-v]');
   if(vb){ state.view = vb.dataset.v; try{ localStorage.setItem('toolshed:view', state.view); }catch(err){} drawIndex(); return; }
@@ -2986,15 +3057,26 @@ function route(){
     return;
   }
   $('#cur').textContent = tool.name;
+  noteRecent(tool.id);
   view.innerHTML =
     '<div class="bench">' +
       '<div class="bench-hd">' +
         '<span class="glyph" style="background:' + (HUE[tool.cat]||'#666') + '">' + tool.glyph + '</span>' +
-        '<div><h2>' + esc(tool.name) + '</h2><p>' + esc(tool.blurb) + '</p></div>' +
+        '<div style="flex:1"><h2>' + esc(tool.name) + '</h2><p>' + esc(tool.blurb) + '</p></div>' +
+        '<button class="ib" id="share" title="Copy link to this tool" aria-label="Copy link to this tool"><i></i>\u29C9</button>' +
       '</div>' +
       '<div id="mount">' + tool.ui() + '</div>' +
+      adSlot('tool') +
     '</div>';
+  $('#share').addEventListener('click', function(){
+    var link = location.origin + SITE + 't/' + tool.id + '/';
+    var b = this;
+    function done(){ b.textContent = '\u2713'; setTimeout(function(){ b.innerHTML = '\u29C9'; }, 1400); }
+    if(navigator.clipboard) navigator.clipboard.writeText(link).then(done, function(){});
+    else done();
+  });
   document.title = tool.name + ' — Toolshed';
+  pushAds(view);
   try{ tool.init($('#mount')); }
   catch(err){
     console.error(err);
